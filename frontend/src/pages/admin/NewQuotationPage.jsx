@@ -26,12 +26,18 @@ export default function NewQuotationPage() {
   const [inclusions, setInclusions] = useState("");
   const [terms, setTerms] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  // Optional per-quote discount override (leave type="" to use global config)
+  const [discountType, setDiscountType] = useState("");
+  const [discountValue, setDiscountValue] = useState("");
+  const [discountLabel, setDiscountLabel] = useState("Discount");
+  const [globalDisc, setGlobalDisc] = useState(null);
   // Cart stores quantity as STRING so user can type freely (incl. empty)
   const [cart, setCart] = useState({}); // code -> {product, qtyText}
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     api.get("/products").then(({ data }) => setProducts(data));
+    api.get("/discount-config").then(({ data }) => setGlobalDisc(data)).catch(() => {});
   }, []);
 
   const filtered = useMemo(() => {
@@ -77,8 +83,25 @@ export default function NewQuotationPage() {
   const brandingNum = Math.max(0, parseFloat(branding || "0") || 0);
   const gstNum = Math.max(0, parseFloat(gstPercent || "0") || 0);
   const preTax = subtotal + shippingNum + packagingNum + brandingNum;
-  const gstAmount = +((preTax * gstNum) / 100).toFixed(2);
-  const grand = +(preTax + gstAmount).toFixed(2);
+  // Effective discount: per-quote override wins, else global if active
+  const effDisc = (() => {
+    if (discountType) {
+      const v = Math.max(0, parseFloat(discountValue || "0") || 0);
+      return { type: discountType, value: v, label: discountLabel || "Discount", source: "quote" };
+    }
+    if (globalDisc && globalDisc.active && Number(globalDisc.value) > 0) {
+      return { type: globalDisc.type, value: Number(globalDisc.value), label: globalDisc.label || "Discount", source: "global" };
+    }
+    return { type: null, value: 0, label: "", source: "none" };
+  })();
+  const discountAmount = effDisc.type === "percent"
+    ? +((preTax * effDisc.value) / 100).toFixed(2)
+    : effDisc.type === "flat"
+      ? +Math.min(effDisc.value, preTax).toFixed(2)
+      : 0;
+  const taxable = Math.max(0, preTax - discountAmount);
+  const gstAmount = +((taxable * gstNum) / 100).toFixed(2);
+  const grand = +(taxable + gstAmount).toFixed(2);
 
   const submit = async () => {
     if (!customer.trim()) return toast.error("Customer name required");
@@ -101,6 +124,9 @@ export default function NewQuotationPage() {
         packaging_charges: packagingNum,
         branding_charges: brandingNum,
         gst_percent: gstNum,
+        discount_type: discountType || null,
+        discount_value: discountType ? (parseFloat(discountValue) || 0) : null,
+        discount_label: discountType ? (discountLabel || "Discount").trim() : null,
         subject: subject.trim(),
         delivery_timeline: deliveryTimeline.trim(),
         payment_terms: paymentTerms.trim(),
@@ -236,6 +262,89 @@ export default function NewQuotationPage() {
             placeholder="0 (e.g. 18)"
             className="mt-2 w-full border-b border-zinc-300 focus:border-[#002FA7] py-2 font-mono text-lg outline-none"
           />
+        </div>
+      </div>
+
+      {/* Discount block */}
+      <div className="mt-2 border border-zinc-200 bg-white">
+        <div className="px-5 py-3 border-b border-zinc-200 flex items-center justify-between bg-emerald-50/50">
+          <div>
+            <p className="overline text-[10px]">Discount (optional)</p>
+            {globalDisc && globalDisc.active && Number(globalDisc.value) > 0 && !discountType && (
+              <p className="text-[11px] text-emerald-800 mt-1">
+                A <b>global discount</b> is active: {globalDisc.type === "percent" ? `${globalDisc.value}%` : `₹${globalDisc.value}`} ({globalDisc.label}). It will apply automatically unless you override below.
+              </p>
+            )}
+            {(!globalDisc || !globalDisc.active) && !discountType && (
+              <p className="text-[11px] text-zinc-500 mt-1">No global discount configured. Set one below just for this quotation, or leave blank.</p>
+            )}
+            {discountType && (
+              <p className="text-[11px] text-emerald-800 mt-1">Overriding for this quote: {discountType === "percent" ? `${discountValue || 0}%` : `₹${discountValue || 0}`} ({discountLabel})</p>
+            )}
+          </div>
+          {discountType && (
+            <button
+              type="button"
+              onClick={() => { setDiscountType(""); setDiscountValue(""); }}
+              data-testid="newq-discount-clear"
+              className="text-xs text-zinc-500 hover:text-red-600 underline"
+            >Clear override</button>
+          )}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-zinc-200">
+          <div className="bg-white p-4">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Type</p>
+            <div className="mt-2 grid grid-cols-3 gap-1">
+              <button
+                type="button"
+                onClick={() => setDiscountType("")}
+                data-testid="newq-discount-none"
+                className={`px-2 py-1.5 text-xs border ${!discountType ? "bg-zinc-900 text-white border-zinc-900" : "bg-white border-zinc-300 hover:border-zinc-900"}`}
+              >Auto</button>
+              <button
+                type="button"
+                onClick={() => setDiscountType("flat")}
+                data-testid="newq-discount-flat"
+                className={`px-2 py-1.5 text-xs border ${discountType === "flat" ? "bg-[#002FA7] text-white border-[#002FA7]" : "bg-white border-zinc-300 hover:border-zinc-900"}`}
+              >Flat ₹</button>
+              <button
+                type="button"
+                onClick={() => setDiscountType("percent")}
+                data-testid="newq-discount-percent"
+                className={`px-2 py-1.5 text-xs border ${discountType === "percent" ? "bg-[#002FA7] text-white border-[#002FA7]" : "bg-white border-zinc-300 hover:border-zinc-900"}`}
+              >Percent %</button>
+            </div>
+            <p className="text-[10px] text-zinc-500 mt-2">Auto = use global. Flat/Percent = override for this quote.</p>
+          </div>
+          <div className="bg-white p-4">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Value</p>
+            <div className="relative mt-2">
+              <input
+                data-testid="newq-discount-value"
+                type="number"
+                min={0}
+                step={discountType === "percent" ? 0.5 : 50}
+                value={discountValue}
+                onChange={(e) => setDiscountValue(e.target.value)}
+                disabled={!discountType}
+                placeholder="0"
+                className="w-full border-b border-zinc-300 focus:border-[#002FA7] py-2 font-mono text-lg outline-none disabled:opacity-50 pr-6"
+              />
+              <span className="absolute right-1 top-2 text-zinc-500">{discountType === "percent" ? "%" : "₹"}</span>
+            </div>
+          </div>
+          <div className="bg-white p-4">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Label (shown on PDF)</p>
+            <input
+              data-testid="newq-discount-label"
+              type="text"
+              value={discountLabel}
+              onChange={(e) => setDiscountLabel(e.target.value)}
+              disabled={!discountType}
+              placeholder="Discount"
+              className="mt-2 w-full border-b border-zinc-300 focus:border-[#002FA7] py-2 text-sm outline-none disabled:opacity-50"
+            />
+          </div>
         </div>
       </div>
 
@@ -411,6 +520,12 @@ export default function NewQuotationPage() {
             {packagingNum > 0 && <div className="flex items-center justify-between"><span className="text-zinc-500">Packaging</span><span className="font-mono">{formatINR(packagingNum)}</span></div>}
             {brandingNum > 0 && <div className="flex items-center justify-between"><span className="text-zinc-500">Branding / Print</span><span className="font-mono">{formatINR(brandingNum)}</span></div>}
             {shippingNum > 0 && <div className="flex items-center justify-between"><span className="text-zinc-500">Shipping</span><span className="font-mono">{formatINR(shippingNum)}</span></div>}
+            {discountAmount > 0 && (
+              <div className="flex items-center justify-between text-emerald-700">
+                <span>Less: {effDisc.label}{effDisc.type === "percent" ? ` (${effDisc.value}%)` : ""}{effDisc.source === "global" ? " (global)" : ""}</span>
+                <span className="font-mono">- {formatINR(discountAmount)}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between"><span className="text-zinc-500">GST ({gstNum || 0}%)</span><span className="font-mono">{formatINR(gstAmount)}</span></div>
           </div>
           <div className="mt-3 pt-3 border-t-2 border-zinc-900 flex items-center justify-between">
