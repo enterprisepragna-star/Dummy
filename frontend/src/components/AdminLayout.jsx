@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { ADMIN, AUTH } from "@/constants/testIds";
-import { Boxes, Package, Receipt, Settings2, LogOut, PlusSquare, Layers, Menu, X, CheckCircle2, FolderTree } from "lucide-react";
+import { Boxes, Package, Receipt, Settings2, LogOut, PlusSquare, Layers, Menu, X, CheckCircle2, FolderTree, Percent } from "lucide-react";
 
 const NavItem = ({ to, label, icon: Icon, testid, onClick }) => {
   const loc = useLocation();
@@ -51,6 +51,7 @@ export default function AdminLayout({ children }) {
         <NavItem to="/admin/products" label="Products" icon={Package} testid={ADMIN.navProducts} onClick={closeMobile} />
         <NavItem to="/admin/categories" label="Categories" icon={FolderTree} testid="nav-categories" onClick={closeMobile} />
         <NavItem to="/admin/pricing-rule" label="Pricing Rules" icon={Settings2} testid={ADMIN.navPricing} onClick={closeMobile} />
+        <NavItem to="/admin/discount" label="Discount" icon={Percent} testid="nav-discount" onClick={closeMobile} />
 
         <p className="overline px-5 mt-6 mb-2">Sales</p>
         <NavItem to="/admin/quotations/new" label="New Quotation" icon={PlusSquare} testid={ADMIN.navNewQuote} onClick={closeMobile} />

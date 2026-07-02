@@ -17,11 +17,14 @@ export default function NewQuotationPage() {
   const [notes, setNotes] = useState("");
   const [validUntil, setValidUntil] = useState("");
   const [shipping, setShipping] = useState("");
+  const [packaging, setPackaging] = useState("");
+  const [branding, setBranding] = useState("");
   const [gstPercent, setGstPercent] = useState("");
   const [subject, setSubject] = useState("");
   const [deliveryTimeline, setDeliveryTimeline] = useState("");
   const [paymentTerms, setPaymentTerms] = useState("");
   const [inclusions, setInclusions] = useState("");
+  const [terms, setTerms] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   // Cart stores quantity as STRING so user can type freely (incl. empty)
   const [cart, setCart] = useState({}); // code -> {product, qtyText}
@@ -70,9 +73,12 @@ export default function NewQuotationPage() {
   });
   const subtotal = linesValid.reduce((s, x) => s + x.quantity * x.product.oncost_price, 0);
   const shippingNum = Math.max(0, parseFloat(shipping || "0") || 0);
+  const packagingNum = Math.max(0, parseFloat(packaging || "0") || 0);
+  const brandingNum = Math.max(0, parseFloat(branding || "0") || 0);
   const gstNum = Math.max(0, parseFloat(gstPercent || "0") || 0);
-  const gstAmount = +(((subtotal + shippingNum) * gstNum) / 100).toFixed(2);
-  const grand = +(subtotal + shippingNum + gstAmount).toFixed(2);
+  const preTax = subtotal + shippingNum + packagingNum + brandingNum;
+  const gstAmount = +((preTax * gstNum) / 100).toFixed(2);
+  const grand = +(preTax + gstAmount).toFixed(2);
 
   const submit = async () => {
     if (!customer.trim()) return toast.error("Customer name required");
@@ -92,11 +98,14 @@ export default function NewQuotationPage() {
         notes: notes.trim(),
         valid_until: validUntil || null,
         shipping_charges: shippingNum,
+        packaging_charges: packagingNum,
+        branding_charges: brandingNum,
         gst_percent: gstNum,
         subject: subject.trim(),
         delivery_timeline: deliveryTimeline.trim(),
         payment_terms: paymentTerms.trim(),
         inclusions: inclusions.trim(),
+        terms_and_conditions: terms.trim(),
         items: linesToSend.map(x => ({ product_id: x.product.id, quantity: x.quantity })),
       });
       toast.success(`Quotation ${data.quotation_id} created`);
@@ -178,9 +187,33 @@ export default function NewQuotationPage() {
         </div>
       </div>
 
-      <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-px bg-zinc-200 border border-zinc-200">
+      <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-px bg-zinc-200 border border-zinc-200">
         <div className="bg-white p-5">
-          <p className="overline text-[10px] flex items-center gap-1"><Truck size={10} /> Shipping charges (₹)</p>
+          <p className="overline text-[10px]">Packaging (₹)</p>
+          <input
+            data-testid="newq-packaging"
+            type="number"
+            min={0}
+            value={packaging}
+            onChange={(e) => setPackaging(e.target.value)}
+            placeholder="0"
+            className="mt-2 w-full border-b border-zinc-300 focus:border-[#002FA7] py-2 font-mono text-lg outline-none"
+          />
+        </div>
+        <div className="bg-white p-5">
+          <p className="overline text-[10px]">Branding / Print (₹)</p>
+          <input
+            data-testid="newq-branding"
+            type="number"
+            min={0}
+            value={branding}
+            onChange={(e) => setBranding(e.target.value)}
+            placeholder="0"
+            className="mt-2 w-full border-b border-zinc-300 focus:border-[#002FA7] py-2 font-mono text-lg outline-none"
+          />
+        </div>
+        <div className="bg-white p-5">
+          <p className="overline text-[10px] flex items-center gap-1"><Truck size={10} /> Shipping (₹)</p>
           <input
             data-testid="newq-shipping"
             type="number"
@@ -273,9 +306,21 @@ export default function NewQuotationPage() {
                 rows={2}
                 value={paymentTerms}
                 onChange={(e) => setPaymentTerms(e.target.value)}
-                placeholder="50% advance on confirmation, 50% before dispatch. Bank Transfer / UPI / Online."
+                placeholder="50% advance on confirmation, 50% before dispatch. Bank Transfer / Cheque only."
                 className="mt-2 w-full border border-zinc-300 focus:border-[#002FA7] p-2 text-sm outline-none resize-y"
               />
+            </div>
+            <div className="lg:col-span-2">
+              <p className="overline text-[10px]">Terms &amp; Conditions (separate with ;)</p>
+              <textarea
+                data-testid="newq-terms"
+                rows={4}
+                value={terms}
+                onChange={(e) => setTerms(e.target.value)}
+                placeholder="Leave blank to use the default 10-point terms. Separate each clause with a semicolon."
+                className="mt-2 w-full border border-zinc-300 focus:border-[#002FA7] p-2 text-sm outline-none resize-y"
+              />
+              <p className="text-[10px] text-zinc-500 mt-1">Overrides the default T&amp;C block on the PDF.</p>
             </div>
           </div>
         )}
@@ -362,8 +407,10 @@ export default function NewQuotationPage() {
 
           {/* Breakdown */}
           <div className="mt-4 pt-3 border-t border-zinc-200 space-y-1 text-sm">
-            <div className="flex items-center justify-between"><span className="text-zinc-500">Subtotal</span><span className="font-mono">{formatINR(subtotal)}</span></div>
-            <div className="flex items-center justify-between"><span className="text-zinc-500">Shipping</span><span className="font-mono">{formatINR(shippingNum)}</span></div>
+            <div className="flex items-center justify-between"><span className="text-zinc-500">Subtotal (Products)</span><span className="font-mono">{formatINR(subtotal)}</span></div>
+            {packagingNum > 0 && <div className="flex items-center justify-between"><span className="text-zinc-500">Packaging</span><span className="font-mono">{formatINR(packagingNum)}</span></div>}
+            {brandingNum > 0 && <div className="flex items-center justify-between"><span className="text-zinc-500">Branding / Print</span><span className="font-mono">{formatINR(brandingNum)}</span></div>}
+            {shippingNum > 0 && <div className="flex items-center justify-between"><span className="text-zinc-500">Shipping</span><span className="font-mono">{formatINR(shippingNum)}</span></div>}
             <div className="flex items-center justify-between"><span className="text-zinc-500">GST ({gstNum || 0}%)</span><span className="font-mono">{formatINR(gstAmount)}</span></div>
           </div>
           <div className="mt-3 pt-3 border-t-2 border-zinc-900 flex items-center justify-between">

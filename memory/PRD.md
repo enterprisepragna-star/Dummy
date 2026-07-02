@@ -64,3 +64,13 @@ User clarifications:
   - New 10-point **TERMS & CONDITIONS** section (validity, taxes, artwork approval, ±2% tolerance, jurisdiction, force majeure).
 - **Existing 92 products and their images: untouched.** All admin-uploaded images remain intact.
 - **Backend bug fix**: `POST /api/products` previously returned 500 because Motor mutates the inserted dict with `_id` (ObjectId, not JSON-serializable). Fixed by popping `_id` after insert.
+
+## 2026-07-02 — Pricing toggle + Charges breakup + Discount + Editable T&C
+- **Letterhead** updated in preview .env: `Tellapur, Hyderabad, Telangana - 500019` + `enterprisepragna@gmail.com`. Jurisdiction in T&C also switched to Hyderabad, Telangana. ⚠️ Production has its own immutable secrets — user MUST update `COMPANY_ADDRESS` and `COMPANY_EMAIL` in Deployment Panel → Secrets before redeploying.
+- **Pricing rule active toggle** — `PricingRule.active: bool = True`. When OFF, `compute_oncost_price` returns sg_price unchanged. UI shows a green/amber banner + slider switch.
+- **Global persistent Discount** — New `discount_config` singleton {active, type: flat|percent, value, label}. Admin console at `/admin/discount`. Applied automatically on every new quote unless per-quote overridden.
+- **Charges breakup in quotations** — Added fields `packaging_charges`, `branding_charges` alongside existing `shipping_charges`, `gst_percent`. Math: subtotal + packaging + branding + shipping – discount → taxable → + GST → grand total.
+- **PATCH /api/quotations/{qid}/edit** — Lets admin edit charges, discount override, GST, inclusions, T&C, delivery, payment terms on an existing quotation. Totals recompute server-side.
+- **Quotation Detail — Edit charges panel** — Collapsible section on QuotationDetailPage with inputs for all editable fields; on Save it PATCHes the quote and reloads.
+- **PDF totals table** — Now conditionally renders Packaging, Branding, Shipping, Less: Discount lines (green), then GST, then Grand Total. Legacy quotes without new fields render unchanged.
+- **Bug fixes**: `PUT /api/pricing-rule` now propagates `active` field; GET defaults `active: true` for legacy docs.

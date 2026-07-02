@@ -12,6 +12,7 @@ import PublicCatalogPage from "@/pages/PublicCatalogPage";
 import PublicQuotationPage from "@/pages/PublicQuotationPage";
 import ProductsPage from "@/pages/admin/ProductsPage";
 import CategoriesPage from "@/pages/admin/CategoriesPage";
+import DiscountConfigPage from "@/pages/admin/DiscountConfigPage";
 import PricingRulePage from "@/pages/admin/PricingRulePage";
 import QuotationsListPage from "@/pages/admin/QuotationsListPage";
 import NewQuotationPage from "@/pages/admin/NewQuotationPage";
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/admin/products" element={<Admin><ProductsPage /></Admin>} />
           <Route path="/admin/categories" element={<Admin><CategoriesPage /></Admin>} />
           <Route path="/admin/pricing-rule" element={<Admin><PricingRulePage /></Admin>} />
+          <Route path="/admin/discount" element={<Admin><DiscountConfigPage /></Admin>} />
           <Route path="/admin/quotations" element={<Admin><QuotationsListPage /></Admin>} />
           <Route path="/admin/quotations/new" element={<Admin><NewQuotationPage /></Admin>} />
           <Route path="/admin/quotations/:id" element={<Admin><QuotationDetailPage /></Admin>} />

@@ -151,7 +151,10 @@ def serialize_doc(d: dict) -> dict:
 
 
 def compute_oncost_price(sg_price: int, rule: dict) -> int:
-    """rule: {threshold, below_increment, at_or_above_increment, rounding}"""
+    """rule: {threshold, below_increment, at_or_above_increment, rounding, active}
+    If rule.active is explicitly False, markup is skipped and sg_price is used directly."""
+    if rule.get("active", True) is False:
+        return int(sg_price)
     threshold = rule.get("threshold", 1000)
     below = rule.get("below_increment", 50)
     above = rule.get("at_or_above_increment", 100)
@@ -208,6 +211,7 @@ class PricingRule(BaseModel):
     below_increment: int = 50
     at_or_above_increment: int = 100
     rounding: int = 1  # round to nearest n rupees (1 = exact)
+    active: bool = True  # when False, markup is skipped and sg_price is used directly
 
 
 class ProductIn(BaseModel):
@@ -272,12 +276,45 @@ class QuotationIn(BaseModel):
     items: List[QuotationItemIn]
     valid_until: Optional[str] = None
     shipping_charges: float = 0
+    packaging_charges: float = 0
+    branding_charges: float = 0
     gst_percent: float = 0
+    # Per-quote discount override. If discount_type is None the global DiscountConfig is used.
+    discount_type: Optional[str] = None   # "flat" | "percent" | None
+    discount_value: Optional[float] = None
+    discount_label: Optional[str] = None
     subject: str = ""
     delivery_timeline: str = ""
     payment_terms: str = ""
     inclusions: str = ""
     terms_and_conditions: str = ""
+
+
+class QuotationEditIn(BaseModel):
+    """Editable fields on an existing quotation (no line-item changes)."""
+    model_config = ConfigDict(extra="ignore")
+    shipping_charges: Optional[float] = None
+    packaging_charges: Optional[float] = None
+    branding_charges: Optional[float] = None
+    gst_percent: Optional[float] = None
+    discount_type: Optional[str] = None
+    discount_value: Optional[float] = None
+    discount_label: Optional[str] = None
+    subject: Optional[str] = None
+    delivery_timeline: Optional[str] = None
+    payment_terms: Optional[str] = None
+    inclusions: Optional[str] = None
+    terms_and_conditions: Optional[str] = None
+    notes: Optional[str] = None
+    valid_until: Optional[str] = None
+
+
+class DiscountConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    active: bool = False
+    type: str = "flat"   # "flat" | "percent"
+    value: float = 0
+    label: str = "Discount"
 
 
 # ---------- Auth endpoints ----------
@@ -311,9 +348,10 @@ async def me(user=Depends(get_current_user)):
 async def get_rule(_user=Depends(get_current_user)):
     rule = await db.pricing_rule.find_one({"_id": "default"})
     if not rule:
-        rule = {"_id": "default", "threshold": 1000, "below_increment": 50, "at_or_above_increment": 100, "rounding": 1}
+        rule = {"_id": "default", "threshold": 1000, "below_increment": 50, "at_or_above_increment": 100, "rounding": 1, "active": True}
         await db.pricing_rule.insert_one(rule)
     rule.pop("_id", None)
+    rule.setdefault("active", True)
     return rule
 
 
@@ -328,9 +366,42 @@ async def put_rule(rule: PricingRule, _user=Depends(get_current_user)):
 async def public_rule():
     rule = await db.pricing_rule.find_one({"_id": "default"})
     if not rule:
-        return {"threshold": 1000, "below_increment": 50, "at_or_above_increment": 100}
+        return {"threshold": 1000, "below_increment": 50, "at_or_above_increment": 100, "active": True}
     rule.pop("_id", None)
+    rule.setdefault("active", True)
     return rule
+
+
+# ---------- Discount config (persistent, global) ----------
+@api.get("/discount-config")
+async def get_discount(_user=Depends(get_current_user)):
+    doc = await db.discount_config.find_one({"_id": "default"})
+    if not doc:
+        doc = {"_id": "default", "active": False, "type": "flat", "value": 0, "label": "Discount"}
+        await db.discount_config.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@api.put("/discount-config")
+async def put_discount(payload: DiscountConfig, _user=Depends(get_current_user)):
+    doc = payload.model_dump()
+    if doc["type"] not in ("flat", "percent"):
+        raise HTTPException(400, "type must be 'flat' or 'percent'")
+    if doc["value"] < 0:
+        raise HTTPException(400, "value must be >= 0")
+    await db.discount_config.update_one({"_id": "default"}, {"$set": doc}, upsert=True)
+    return doc
+
+
+async def _resolve_discount(q_type: Optional[str], q_value: Optional[float], q_label: Optional[str]) -> dict:
+    """Return {type, value, label, source} — either from per-quote override or global config."""
+    if q_type in ("flat", "percent"):
+        return {"type": q_type, "value": float(q_value or 0), "label": (q_label or "Discount"), "source": "quote"}
+    cfg = await db.discount_config.find_one({"_id": "default"})
+    if cfg and cfg.get("active") and float(cfg.get("value", 0)) > 0:
+        return {"type": cfg.get("type", "flat"), "value": float(cfg["value"]), "label": cfg.get("label", "Discount"), "source": "global"}
+    return {"type": None, "value": 0.0, "label": "", "source": "none"}
 
 
 # ---------- Products ----------
@@ -489,9 +560,20 @@ async def _build_quotation_doc(q: QuotationIn) -> dict:
     token = secrets.token_urlsafe(10)
     subtotal = total
     shipping = max(0, float(q.shipping_charges or 0))
+    packaging = max(0, float(q.packaging_charges or 0))
+    branding = max(0, float(q.branding_charges or 0))
     gst_percent = max(0, float(q.gst_percent or 0))
-    gst_amount = round((subtotal + shipping) * gst_percent / 100, 2)
-    grand_total = round(subtotal + shipping + gst_amount, 2)
+    pre_tax = subtotal + shipping + packaging + branding
+    disc = await _resolve_discount(q.discount_type, q.discount_value, q.discount_label)
+    if disc["type"] == "percent":
+        discount_amount = round(pre_tax * disc["value"] / 100.0, 2)
+    elif disc["type"] == "flat":
+        discount_amount = round(min(disc["value"], pre_tax), 2)
+    else:
+        discount_amount = 0.0
+    taxable = max(0.0, pre_tax - discount_amount)
+    gst_amount = round(taxable * gst_percent / 100, 2)
+    grand_total = round(taxable + gst_amount, 2)
     doc = {
         "quotation_id": qid,
         "customer_name": q.customer_name,
@@ -508,8 +590,15 @@ async def _build_quotation_doc(q: QuotationIn) -> dict:
         "items": items_out,
         "subtotal": subtotal,
         "shipping_charges": shipping,
+        "packaging_charges": packaging,
+        "branding_charges": branding,
         "gst_percent": gst_percent,
         "gst_amount": gst_amount,
+        "discount_type": disc["type"],
+        "discount_value": disc["value"],
+        "discount_label": disc["label"],
+        "discount_amount": discount_amount,
+        "taxable_amount": taxable,
         "total": grand_total,
         "valid_until": q.valid_until,
         "share_token": token,
@@ -555,6 +644,56 @@ async def toggle_quotation(qid: str, _user=Depends(get_current_user)):
     new_active = not d.get("active", True)
     await db.quotations.update_one({"_id": ObjectId(qid)}, {"$set": {"active": new_active}})
     return {"active": new_active}
+
+
+@api.patch("/quotations/{qid}/edit")
+async def edit_quotation(qid: str, payload: QuotationEditIn, _user=Depends(get_current_user)):
+    d = await db.quotations.find_one({"_id": ObjectId(qid)})
+    if not d:
+        raise HTTPException(404, "Not found")
+    # Merge inbound patch onto the current doc for the recomputable charge / text fields.
+    up = payload.model_dump(exclude_unset=True)
+    for k, v in up.items():
+        if v is not None:
+            d[k] = v
+    # Recompute totals with the new charges/discount.
+    subtotal = float(d.get("subtotal", 0))
+    shipping = max(0, float(d.get("shipping_charges", 0) or 0))
+    packaging = max(0, float(d.get("packaging_charges", 0) or 0))
+    branding = max(0, float(d.get("branding_charges", 0) or 0))
+    gst_percent = max(0, float(d.get("gst_percent", 0) or 0))
+    pre_tax = subtotal + shipping + packaging + branding
+    q_type = d.get("discount_type")
+    disc = await _resolve_discount(q_type, d.get("discount_value"), d.get("discount_label"))
+    if disc["type"] == "percent":
+        discount_amount = round(pre_tax * disc["value"] / 100.0, 2)
+    elif disc["type"] == "flat":
+        discount_amount = round(min(disc["value"], pre_tax), 2)
+    else:
+        discount_amount = 0.0
+    taxable = max(0.0, pre_tax - discount_amount)
+    gst_amount = round(taxable * gst_percent / 100, 2)
+    grand_total = round(taxable + gst_amount, 2)
+    update = {
+        "shipping_charges": shipping,
+        "packaging_charges": packaging,
+        "branding_charges": branding,
+        "gst_percent": gst_percent,
+        "discount_type": disc["type"],
+        "discount_value": disc["value"],
+        "discount_label": disc["label"],
+        "discount_amount": discount_amount,
+        "taxable_amount": taxable,
+        "gst_amount": gst_amount,
+        "total": grand_total,
+    }
+    for k in ("subject", "delivery_timeline", "payment_terms", "inclusions", "terms_and_conditions", "notes", "valid_until"):
+        if k in up and up[k] is not None:
+            update[k] = up[k]
+    await db.quotations.update_one({"_id": ObjectId(qid)}, {"$set": update})
+    doc = await db.quotations.find_one({"_id": ObjectId(qid)})
+    doc["id"] = str(doc.pop("_id"))
+    return doc
 
 
 @api.delete("/quotations/{qid}")
@@ -783,21 +922,36 @@ def _build_pdf(q: dict) -> bytes:
     # ===== TOTALS =====
     subtotal = q.get("subtotal", q.get("total", 0))
     shipping = q.get("shipping_charges", 0)
+    packaging = q.get("packaging_charges", 0) or 0
+    branding = q.get("branding_charges", 0) or 0
+    discount_amount = q.get("discount_amount", 0) or 0
+    discount_type = q.get("discount_type")
+    discount_value = q.get("discount_value", 0)
+    discount_label = q.get("discount_label") or "Discount"
     gst_percent = q.get("gst_percent", 0)
     gst_amount = q.get("gst_amount", 0)
     grand = q.get("total", subtotal + shipping + gst_amount)
 
     brk_lbl = ParagraphStyle("brk_lbl", parent=styles["Normal"], fontName=_FONT_REG, fontSize=9, textColor=MUTED, alignment=TA_RIGHT)
     brk_val = ParagraphStyle("brk_val", parent=styles["Normal"], fontName=_FONT_REG, fontSize=10, textColor=INK, alignment=TA_RIGHT)
+    disc_lbl = ParagraphStyle("disc_lbl", parent=styles["Normal"], fontName=_FONT_REG, fontSize=9, textColor=colors.HexColor("#065F46"), alignment=TA_RIGHT)
+    disc_val = ParagraphStyle("disc_val", parent=styles["Normal"], fontName=_FONT_REG, fontSize=10, textColor=colors.HexColor("#065F46"), alignment=TA_RIGHT)
 
-    totals = Table(
-        [
-            [Paragraph("Subtotal", brk_lbl), Paragraph(format_inr(subtotal), brk_val)],
-            [Paragraph("Shipping", brk_lbl), Paragraph(format_inr(shipping), brk_val)],
-            [Paragraph(f"GST ({gst_percent:g}%)", brk_lbl), Paragraph(format_inr(gst_amount), brk_val)],
-        ],
-        colWidths=[140 * mm, 42 * mm],
-    )
+    rows = [[Paragraph("Subtotal (Products)", brk_lbl), Paragraph(format_inr(subtotal), brk_val)]]
+    if packaging > 0:
+        rows.append([Paragraph("Packaging Charges", brk_lbl), Paragraph(format_inr(packaging), brk_val)])
+    if branding > 0:
+        rows.append([Paragraph("Branding / Printing Charges", brk_lbl), Paragraph(format_inr(branding), brk_val)])
+    if shipping > 0:
+        rows.append([Paragraph("Shipping Charges", brk_lbl), Paragraph(format_inr(shipping), brk_val)])
+    if discount_amount > 0:
+        d_label = discount_label
+        if discount_type == "percent":
+            d_label = f"{discount_label} ({discount_value:g}%)"
+        rows.append([Paragraph(f"Less: {d_label}", disc_lbl), Paragraph(f"- {format_inr(discount_amount)}", disc_val)])
+    rows.append([Paragraph(f"GST ({gst_percent:g}%)", brk_lbl), Paragraph(format_inr(gst_amount), brk_val)])
+
+    totals = Table(rows, colWidths=[140 * mm, 42 * mm])
     totals.setStyle(TableStyle([
         ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
         ("TOPPADDING", (0, 0), (-1, -1), 2),

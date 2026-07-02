@@ -160,13 +160,35 @@ export default function QuotationDetailPage() {
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={6} className="p-3 text-right text-zinc-500">Subtotal</td>
+              <td colSpan={6} className="p-3 text-right text-zinc-500">Subtotal (Products)</td>
               <td className="p-3 text-right font-mono">{formatINR(q.subtotal ?? q.total)}</td>
             </tr>
-            <tr>
-              <td colSpan={6} className="p-3 text-right text-zinc-500">Shipping</td>
-              <td className="p-3 text-right font-mono">{formatINR(q.shipping_charges || 0)}</td>
-            </tr>
+            {(q.packaging_charges || 0) > 0 && (
+              <tr>
+                <td colSpan={6} className="p-3 text-right text-zinc-500">Packaging Charges</td>
+                <td className="p-3 text-right font-mono">{formatINR(q.packaging_charges)}</td>
+              </tr>
+            )}
+            {(q.branding_charges || 0) > 0 && (
+              <tr>
+                <td colSpan={6} className="p-3 text-right text-zinc-500">Branding / Printing Charges</td>
+                <td className="p-3 text-right font-mono">{formatINR(q.branding_charges)}</td>
+              </tr>
+            )}
+            {(q.shipping_charges || 0) > 0 && (
+              <tr>
+                <td colSpan={6} className="p-3 text-right text-zinc-500">Shipping Charges</td>
+                <td className="p-3 text-right font-mono">{formatINR(q.shipping_charges)}</td>
+              </tr>
+            )}
+            {(q.discount_amount || 0) > 0 && (
+              <tr>
+                <td colSpan={6} className="p-3 text-right text-emerald-700">
+                  Less: {q.discount_label || "Discount"}{q.discount_type === "percent" ? ` (${q.discount_value}%)` : ""}
+                </td>
+                <td className="p-3 text-right font-mono text-emerald-700">- {formatINR(q.discount_amount)}</td>
+              </tr>
+            )}
             <tr>
               <td colSpan={6} className="p-3 text-right text-zinc-500">GST ({q.gst_percent || 0}%)</td>
               <td className="p-3 text-right font-mono">{formatINR(q.gst_amount || 0)}</td>
@@ -178,6 +200,8 @@ export default function QuotationDetailPage() {
           </tfoot>
         </table>
       </div>
+
+      <EditChargesPanel q={q} onSaved={load} />
 
       {q.notes && (
         <div className="mt-6 border border-zinc-200 p-4">
@@ -258,6 +282,195 @@ export default function QuotationDetailPage() {
                 <CheckCircle2 size={14} /> {acceptBusy ? "Accepting…" : "Confirm & convert to sale"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Panel to edit charges, discount, T&C, inclusions on an existing quotation. */
+function EditChargesPanel({ q, onSaved }) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    packaging_charges: q.packaging_charges || 0,
+    branding_charges: q.branding_charges || 0,
+    shipping_charges: q.shipping_charges || 0,
+    gst_percent: q.gst_percent || 0,
+    discount_type: q.discount_type || "",
+    discount_value: q.discount_value || 0,
+    discount_label: q.discount_label || "Discount",
+    inclusions: q.inclusions || "",
+    terms_and_conditions: q.terms_and_conditions || "",
+    delivery_timeline: q.delivery_timeline || "",
+    payment_terms: q.payment_terms || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const update = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const body = {
+        packaging_charges: Number(form.packaging_charges) || 0,
+        branding_charges: Number(form.branding_charges) || 0,
+        shipping_charges: Number(form.shipping_charges) || 0,
+        gst_percent: Number(form.gst_percent) || 0,
+        discount_type: form.discount_type || null,
+        discount_value: Number(form.discount_value) || 0,
+        discount_label: (form.discount_label || "Discount").trim(),
+        inclusions: form.inclusions,
+        terms_and_conditions: form.terms_and_conditions,
+        delivery_timeline: form.delivery_timeline,
+        payment_terms: form.payment_terms,
+      };
+      await api.patch(`/quotations/${q.id}/edit`, body);
+      toast.success("Quotation updated — download a fresh PDF to reflect changes");
+      setOpen(false);
+      onSaved && onSaved();
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-6 border border-zinc-200">
+      <button
+        onClick={() => setOpen(o => !o)}
+        data-testid="edit-charges-toggle"
+        className="w-full px-5 py-4 flex items-center justify-between hover:bg-zinc-50"
+      >
+        <div className="text-left">
+          <p className="overline text-[10px]">Editable</p>
+          <p className="font-display text-lg mt-1">Charges, Discount, Inclusions &amp; Terms</p>
+          <p className="text-[11px] text-zinc-500 mt-1">Adjust packaging / branding / shipping / GST / discount and the terms text before regenerating the PDF.</p>
+        </div>
+        <span className="text-xs text-zinc-500">{open ? "Hide" : "Edit ▾"}</span>
+      </button>
+      {open && (
+        <div className="border-t border-zinc-200 p-5 space-y-5 bg-zinc-50">
+          {/* Charges row */}
+          <div>
+            <p className="overline text-[10px] mb-2">Charges &amp; Tax</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { k: "packaging_charges", label: "Packaging (₹)" },
+                { k: "branding_charges", label: "Branding (₹)" },
+                { k: "shipping_charges", label: "Shipping (₹)" },
+                { k: "gst_percent", label: "GST %" },
+              ].map(({ k, label }) => (
+                <div key={k}>
+                  <p className="text-[10px] text-zinc-500">{label}</p>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form[k]}
+                    onChange={(e) => update(k, e.target.value)}
+                    data-testid={`edit-${k}`}
+                    className="mt-1 w-full px-2 py-1.5 border border-zinc-300 bg-white font-mono text-sm focus:border-[#002FA7] outline-none"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Discount override */}
+          <div>
+            <p className="overline text-[10px] mb-2">Discount (this quote only — overrides global)</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <p className="text-[10px] text-zinc-500">Type</p>
+                <select
+                  value={form.discount_type || ""}
+                  onChange={(e) => update("discount_type", e.target.value)}
+                  data-testid="edit-discount-type"
+                  className="mt-1 w-full px-2 py-1.5 border border-zinc-300 bg-white text-sm focus:border-[#002FA7] outline-none"
+                >
+                  <option value="">— Use global —</option>
+                  <option value="flat">Flat ₹</option>
+                  <option value="percent">Percent %</option>
+                </select>
+              </div>
+              <div>
+                <p className="text-[10px] text-zinc-500">Value</p>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.discount_value}
+                  onChange={(e) => update("discount_value", e.target.value)}
+                  data-testid="edit-discount-value"
+                  className="mt-1 w-full px-2 py-1.5 border border-zinc-300 bg-white font-mono text-sm focus:border-[#002FA7] outline-none"
+                  disabled={!form.discount_type}
+                />
+              </div>
+              <div>
+                <p className="text-[10px] text-zinc-500">Label</p>
+                <input
+                  type="text"
+                  value={form.discount_label}
+                  onChange={(e) => update("discount_label", e.target.value)}
+                  data-testid="edit-discount-label"
+                  className="mt-1 w-full px-2 py-1.5 border border-zinc-300 bg-white text-sm focus:border-[#002FA7] outline-none"
+                  disabled={!form.discount_type}
+                />
+              </div>
+            </div>
+            <p className="text-[10px] text-zinc-500 mt-2">Leave Type blank to fall back to the global discount from the Discount admin page.</p>
+          </div>
+          {/* Text overrides */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <p className="text-[10px] text-zinc-500">Inclusions (separate with ;)</p>
+              <textarea
+                rows={4}
+                value={form.inclusions}
+                onChange={(e) => update("inclusions", e.target.value)}
+                data-testid="edit-inclusions"
+                className="mt-1 w-full px-2 py-1.5 border border-zinc-300 bg-white text-sm focus:border-[#002FA7] outline-none resize-y"
+              />
+            </div>
+            <div>
+              <p className="text-[10px] text-zinc-500">Terms &amp; Conditions (separate with ;)</p>
+              <textarea
+                rows={4}
+                value={form.terms_and_conditions}
+                onChange={(e) => update("terms_and_conditions", e.target.value)}
+                data-testid="edit-terms"
+                className="mt-1 w-full px-2 py-1.5 border border-zinc-300 bg-white text-sm focus:border-[#002FA7] outline-none resize-y"
+              />
+            </div>
+            <div>
+              <p className="text-[10px] text-zinc-500">Delivery timeline</p>
+              <textarea
+                rows={2}
+                value={form.delivery_timeline}
+                onChange={(e) => update("delivery_timeline", e.target.value)}
+                data-testid="edit-delivery"
+                className="mt-1 w-full px-2 py-1.5 border border-zinc-300 bg-white text-sm focus:border-[#002FA7] outline-none resize-y"
+              />
+            </div>
+            <div>
+              <p className="text-[10px] text-zinc-500">Payment terms</p>
+              <textarea
+                rows={2}
+                value={form.payment_terms}
+                onChange={(e) => update("payment_terms", e.target.value)}
+                data-testid="edit-payment"
+                className="mt-1 w-full px-2 py-1.5 border border-zinc-300 bg-white text-sm focus:border-[#002FA7] outline-none resize-y"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-200">
+            <button onClick={() => setOpen(false)} className="px-4 py-2 border border-zinc-300 text-sm hover:border-zinc-900">Cancel</button>
+            <button
+              onClick={save}
+              disabled={saving}
+              data-testid="edit-charges-save"
+              className="px-5 py-2 bg-[#002FA7] hover:bg-[#002277] text-white text-sm disabled:opacity-50"
+            >
+              {saving ? "Saving…" : "Save & recompute total"}
+            </button>
           </div>
         </div>
       )}
