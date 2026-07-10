@@ -164,6 +164,53 @@ def render_password_reset_email(*, name: str, reset_link: str, expires_hours: in
     return _shell(body)
 
 
+def render_referral_lead_email(*, partner_name: str, lead: dict, referral_code: str,
+                               portal_path: str = "/partner/leads") -> str:
+    link = portal_url(portal_path)
+    first = (partner_name or "").split(" ")[0] or "there"
+    body = f"""
+      <p>Hi {first},</p>
+      <p>Great news — a new lead has arrived via your referral link
+         (<span style="font-family:monospace;">{referral_code}</span>) and has been
+         automatically assigned to you.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;border:1px solid #E5E7EB;">
+        <tr><td style="padding:10px 14px;background:#F9FAFB;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1.5px;">Lead</td>
+            <td style="padding:10px 14px;background:#F9FAFB;font-weight:600;">{lead.get('name','—')}</td></tr>
+        <tr><td style="padding:10px 14px;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1.5px;">Company</td>
+            <td style="padding:10px 14px;">{lead.get('company') or '—'}</td></tr>
+        <tr><td style="padding:10px 14px;background:#F9FAFB;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1.5px;">Contact</td>
+            <td style="padding:10px 14px;background:#F9FAFB;">{lead.get('contact_person') or '—'} · {lead.get('phone') or ''} · {lead.get('email') or ''}</td></tr>
+        <tr><td style="padding:10px 14px;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1.5px;">Requirement</td>
+            <td style="padding:10px 14px;">{(lead.get('notes') or '—')[:400]}</td></tr>
+      </table>
+      <p><a href="{link}" style="display:inline-block;background:#002FA7;color:#ffffff;text-decoration:none;padding:10px 18px;font-size:14px;">Open in Partner Portal →</a></p>
+      <p style="color:#6b7280;font-size:12px;margin-top:18px;">Reach out within 24 hours to keep conversion strong.</p>
+    """
+    return _shell(body)
+
+
+def render_referral_lead_admin_email(*, partner_name: str, partner_employee_id: str,
+                                     referral_code: str, lead: dict) -> str:
+    body = f"""
+      <p>New inbound lead via a partner referral link.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;border:1px solid #E5E7EB;">
+        <tr><td style="padding:10px 14px;background:#F9FAFB;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1.5px;">Partner</td>
+            <td style="padding:10px 14px;background:#F9FAFB;font-weight:600;">{partner_name} · <span style="font-family:monospace;">{partner_employee_id}</span></td></tr>
+        <tr><td style="padding:10px 14px;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1.5px;">Referral Code</td>
+            <td style="padding:10px 14px;font-family:monospace;">{referral_code}</td></tr>
+        <tr><td style="padding:10px 14px;background:#F9FAFB;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1.5px;">Lead</td>
+            <td style="padding:10px 14px;background:#F9FAFB;font-weight:600;">{lead.get('name','—')} · {lead.get('company') or '—'}</td></tr>
+        <tr><td style="padding:10px 14px;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1.5px;">Contact</td>
+            <td style="padding:10px 14px;">{lead.get('phone') or ''} · {lead.get('email') or ''}</td></tr>
+        <tr><td style="padding:10px 14px;background:#F9FAFB;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1.5px;">Requirement</td>
+            <td style="padding:10px 14px;background:#F9FAFB;">{(lead.get('notes') or '—')[:400]}</td></tr>
+      </table>
+      <p>The lead has been auto-assigned to the partner above. Review in
+         <a href="{portal_url('/admin/opms/leads')}">Admin → Leads</a>.</p>
+    """
+    return _shell(body)
+
+
 def render_lead_assigned_email(*, name: str, lead: dict, portal_path: str = "/partner/dashboard") -> str:
     link = portal_url(portal_path)
     body = f"""

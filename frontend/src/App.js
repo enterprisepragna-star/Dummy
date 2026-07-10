@@ -28,6 +28,7 @@ import CommissionRulesPage from "@/pages/admin/CommissionRulesPage";
 import CommissionsPage from "@/pages/admin/CommissionsPage";
 import IncentivesPage from "@/pages/admin/IncentivesPage";
 import PartnerRegisterPage from "@/pages/PartnerRegisterPage";
+import ReferralLandingPage from "@/pages/ReferralLandingPage";
 import PartnerDashboardPage from "@/pages/PartnerDashboardPage";
 import PartnerLeadsPage from "@/pages/PartnerLeadsPage";
 import PartnerCommissionsPage from "@/pages/PartnerCommissionsPage";
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="/catalog" element={<PublicCatalogPage />} />
           <Route path="/q/:token" element={<PublicQuotationPage />} />
           <Route path="/partners/register" element={<PartnerRegisterPage />} />
+          <Route path="/refer/:code" element={<ReferralLandingPage />} />
 
           <Route path="/partner" element={<Navigate to="/partner/dashboard" replace />} />
           <Route path="/partner/dashboard" element={<PartnerOnly><PartnerDashboardPage /></PartnerOnly>} />

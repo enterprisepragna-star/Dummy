@@ -174,3 +174,30 @@ Extends the existing FastAPI + React + Mongo app (no Next.js/Supabase migration)
 - Frontend: forgot-password success screen, reset-password invalid-token panel render correctly.
 
 **Known constraint (unchanged)**: Resend still in testing mode → emails only deliver to `enterprisepragna@gmail.com` until the domain is verified on Resend. Any reset requested for other addresses still creates a valid token (visible in Mongo / logs) but the customer won't receive the email until the domain is verified.
+
+---
+
+## 2026-07-10 — Custom Domain Mapping + Referral Landing Page
+
+**Custom domain (`oncostcatalog.in`)**:
+- User already mapped `/catalog`. For all other routes (`/login`, `/admin/*`, `/partner/*`, `/partners/register`, `/refer/*`, `/q/*`) they need to re-link the domain at the **root** (no path suffix) in **Emergent Dashboard → Home → deployment → Link Domain**.
+- Post-mapping, the following production env vars need updating in the Deployment Secrets Panel:
+  - `PORTAL_URL=https://oncostcatalog.in` (backend)
+  - `REACT_APP_BACKEND_URL=https://oncostcatalog.in` (frontend)
+- Preview `backend/.env` `PORTAL_URL` already updated to `https://oncostcatalog.in` so emailed links point to the new domain.
+
+**Referral Landing Page — `/refer/<referral_code>`**:
+- **Backend (`opms.py`)**:
+  - Module-level `ReferralLeadIn` model + two public endpoints under router:
+    - `GET /api/refer/{code}` → returns `{valid, referral_code, partner_first_name, role_label}` for approved partners only. First name only — no full contact info leak.
+    - `POST /api/refer/{code}/lead` → creates a lead with `source="Referral"`, `assigned_to = partner_user_id`, `referral_code`, `referred_by_partner_id`. Notifies both partner (via `render_referral_lead_email`) and admin (via `render_referral_lead_admin_email`). Auto-assignment ensures the lead shows up in `/admin/opms/leads` already tagged to the partner and in the partner's `/partner/leads`.
+- **Frontend**:
+  - New `ReferralLandingPage.jsx` at `/refer/:code` — dark editorial hero ("Deepa invited you to ONCOST"), 3-step "what happens next" panel, capture form (name, company, email, phone, requirement) + "Browse catalog first" button that carries `?ref=CODE` to the catalog.
+  - `PublicCatalogPage.jsx` — persists `?ref=CODE` in `localStorage` under `oncost_ref` so future flows (quotation view etc.) can pick it up.
+  - `PartnerDashboardPage.jsx` — new "Your referral link" widget in the codes card: shows full `PORTAL_URL/refer/<code>` link, Copy button, WhatsApp share (`https://wa.me/?text=…`), Preview link that opens the landing page in a new tab.
+  - Route registered in `App.js`.
+- **E2E verified** via curl + Playwright:
+  - GET info for valid code returns partner first name; invalid code → 404.
+  - POST lead with empty name → 400 "Name is required"; POST with valid payload → 200 with `assigned=true`, lead created with correct `source/referral_code/referred_by_partner_id/assigned_to`.
+  - Frontend hero, form, thank-you, and invalid-code states all render correctly.
+- **Email delivery**: same Resend testing-mode limitation applies — actual email delivery only reaches `enterprisepragna@gmail.com` until the sender domain is verified on Resend. Leads are still fully created and visible in admin/partner portals.

@@ -13,6 +13,12 @@ export default function PublicCatalogPage() {
 
   useEffect(() => {
     api.get("/public/products").then(({ data }) => setProducts(data));
+    // Persist a referral tag if the visitor arrived via /refer or ?ref=
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get("ref");
+      if (ref) localStorage.setItem("oncost_ref", ref.toUpperCase());
+    } catch { /* noop */ }
   }, []);
 
   const filtered = useMemo(() => {

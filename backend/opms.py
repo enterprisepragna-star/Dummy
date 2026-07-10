@@ -25,6 +25,8 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 from emailer import (
     is_enabled as email_enabled,
     render_lead_assigned_email,
+    render_referral_lead_admin_email,
+    render_referral_lead_email,
     render_welcome_email,
     send_email,
 )
@@ -145,6 +147,15 @@ class LeadPatch(BaseModel):
     estimated_value: Optional[float] = None
     assigned_to: Optional[str] = None
     lost_reason: Optional[str] = None
+
+
+class ReferralLeadIn(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    name: str
+    company: str = ""
+    email: str = ""
+    phone: str = ""
+    requirement: str = ""
 
 
 # ------------------------------------------------------------------ HELPERS
@@ -839,6 +850,101 @@ def build_opms_router(
                 "role": u.get("role"),
             })
         return out
+
+    # ================== PUBLIC REFERRAL LINKS ==================
+    async def _partner_by_ref(code: str) -> Optional[dict]:
+        code = (code or "").strip().upper()
+        if not code:
+            return None
+        return await db.partners.find_one({"referral_code": code, "status": "approved"})
+
+    @r.get("/refer/{code}")
+    async def public_referral_info(code: str):
+        """Lightweight metadata for the /refer/<code> landing page.
+        Reveals only the partner's first name + role — never full contact info."""
+        p = await _partner_by_ref(code)
+        if not p:
+            raise HTTPException(404, "This referral link is not active")
+        full_name = p.get("full_name", "") or ""
+        first = (full_name.split(" ")[0] or "Partner")
+        return {
+            "valid": True,
+            "referral_code": p.get("referral_code"),
+            "partner_first_name": first,
+            "role_label": ROLE_LABEL.get(p.get("role") or "", "Partner"),
+        }
+
+    @r.post("/refer/{code}/lead")
+    async def public_referral_lead(code: str, payload: ReferralLeadIn):
+        p = await _partner_by_ref(code)
+        if not p:
+            raise HTTPException(404, "This referral link is not active")
+        # Locate the partner's login user so the lead is auto-assigned to them.
+        u = await db.users.find_one({"email": p.get("email")}) if p.get("email") else None
+        assigned_to = str(u["_id"]) if u else None
+
+        name = (payload.name or "").strip()
+        if not name:
+            raise HTTPException(400, "Name is required")
+
+        lead_doc = {
+            "name": name,
+            "company": (payload.company or "").strip(),
+            "industry": "",
+            "contact_person": name,
+            "designation": "",
+            "phone": (payload.phone or "").strip(),
+            "email": (payload.email or "").strip().lower(),
+            "source": "Referral",
+            "status": "new",
+            "notes": (payload.requirement or "").strip(),
+            "estimated_value": 0,
+            "assigned_to": assigned_to,
+            "referral_code": p.get("referral_code"),
+            "referred_by_partner_id": str(p["_id"]),
+            "created_at": _iso(_now()),
+            "created_by": f"referral:{p.get('referral_code')}",
+            "assigned_at": _iso(_now()) if assigned_to else None,
+        }
+        res = await db.leads.insert_one(lead_doc)
+        lid = str(res.inserted_id)
+
+        # Notify partner (if they have a login) and admin
+        partner_name = p.get("full_name") or ""
+        partner_email = p.get("email")
+        if partner_email and email_enabled():
+            try:
+                await send_email(
+                    partner_email,
+                    f"New referral lead: {name}",
+                    render_referral_lead_email(
+                        partner_name=partner_name,
+                        lead={**lead_doc, "id": lid},
+                        referral_code=p.get("referral_code") or "",
+                    ),
+                )
+            except Exception:
+                pass
+
+        # Admin notify — use ADMIN_EMAIL env
+        import os
+        admin_to = os.environ.get("ADMIN_EMAIL") or os.environ.get("COMPANY_EMAIL")
+        if admin_to and email_enabled():
+            try:
+                await send_email(
+                    admin_to,
+                    f"[Referral] New lead from {partner_name or p.get('referral_code')}",
+                    render_referral_lead_admin_email(
+                        partner_name=partner_name or "—",
+                        partner_employee_id=p.get("employee_id") or "—",
+                        referral_code=p.get("referral_code") or "",
+                        lead={**lead_doc, "id": lid},
+                    ),
+                )
+            except Exception:
+                pass
+
+        return {"ok": True, "lead_id": lid, "assigned": bool(assigned_to)}
 
     return r
 

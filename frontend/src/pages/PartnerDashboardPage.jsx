@@ -5,6 +5,16 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { LogOut, TrendingUp, Users, ShoppingBag, Coins, Award, Bell, User2, Copy, Handshake, ArrowRight } from "lucide-react";
 
+const referralLink = (code) => {
+  if (!code) return "";
+  // Prefer the configured public portal (custom domain) over the current host,
+  // so partners always share the branded link.
+  const base =
+    process.env.REACT_APP_PUBLIC_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "");
+  return `${base}/refer/${code}`;
+};
+
 export default function PartnerDashboardPage() {
   const { logout } = useAuth();
   const nav = useNavigate();
@@ -77,8 +87,62 @@ export default function PartnerDashboardPage() {
               <CodeCell label="Partner Code" value={p.partner_code} copy={copy} />
               <CodeCell label="Referral Code" value={p.referral_code} copy={copy} accent />
             </div>
+
+            {/* Shareable referral link */}
+            {p.referral_code && (
+              <div className="mt-5 border border-emerald-200 bg-emerald-50/40 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="overline text-[10px] text-emerald-800">Your referral link</p>
+                    <p className="mt-2 text-xs text-emerald-900/70 leading-relaxed">
+                      Share this personalised link on WhatsApp, LinkedIn or email — inbound leads land
+                      in your portal automatically.
+                    </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <code
+                        data-testid="partner-referral-link"
+                        className="font-mono text-[12px] bg-white border border-emerald-200 px-2.5 py-1.5 break-all"
+                      >
+                        {referralLink(p.referral_code)}
+                      </code>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    data-testid="partner-referral-copy"
+                    onClick={() => copy(referralLink(p.referral_code))}
+                    className="inline-flex items-center gap-1.5 bg-[#059669] hover:bg-[#047857] text-white px-3 py-1.5 text-xs"
+                  >
+                    <Copy size={12} /> Copy link
+                  </button>
+                  <a
+                    data-testid="partner-referral-whatsapp"
+                    target="_blank"
+                    rel="noreferrer"
+                    href={`https://wa.me/?text=${encodeURIComponent(
+                      `Hi! I'm with ONCOST — premium corporate gifting. Explore our catalog & drop me your requirement here: ${referralLink(p.referral_code)}`,
+                    )}`}
+                    className="inline-flex items-center gap-1.5 border border-emerald-300 hover:border-emerald-600 text-emerald-800 px-3 py-1.5 text-xs"
+                  >
+                    <Handshake size={12} /> Share on WhatsApp
+                  </a>
+                  <a
+                    data-testid="partner-referral-preview"
+                    target="_blank"
+                    rel="noreferrer"
+                    href={referralLink(p.referral_code)}
+                    className="inline-flex items-center gap-1.5 border border-emerald-300 hover:border-emerald-600 text-emerald-800 px-3 py-1.5 text-xs"
+                  >
+                    Preview →
+                  </a>
+                </div>
+              </div>
+            )}
+
             <p className="text-[11px] text-zinc-500 mt-4">
-              Share your <b>referral code</b> with new leads — orders coming through it get you referral commission automatically once we launch the commission engine.
+              Orders coming through your referral link are auto-tagged to you — commissions are
+              computed on order acceptance.
             </p>
           </div>
 
