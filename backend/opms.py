@@ -580,21 +580,37 @@ def build_opms_router(
         total_leads = await db.leads.count_documents({"assigned_to": my_id})
         closed_leads = await db.leads.count_documents({"assigned_to": my_id, "status": "won"})
         active_leads = await db.leads.count_documents({"assigned_to": my_id, "status": {"$nin": ["won", "lost"]}})
+        # Real commission numbers
+        pending_cur = db.commissions.find({"partner_user_id": my_id, "status": "pending"})
+        paid_cur = db.commissions.find({"partner_user_id": my_id, "status": "paid"})
+        pending = await pending_cur.to_list(length=5000)
+        paid = await paid_cur.to_list(length=5000)
+        commission_pending = round(sum(float(c.get("commission_amount") or 0) for c in pending), 2)
+        commission_earned = round(sum(float(c.get("commission_amount") or 0) for c in paid), 2)
+        # This-month / this-year sales attributed to me
+        from datetime import datetime as _dt
+        now = _dt.utcnow()
+        month_start = _dt(now.year, now.month, 1).isoformat()
+        year_start = _dt(now.year, 1, 1).isoformat()
+        sales_cur = db.sales.find({"partner_user_id": my_id})
+        sales_all = await sales_cur.to_list(length=5000)
+        sales_month = round(sum(float(s.get("total") or 0) for s in sales_all if (s.get("accepted_at") or "") >= month_start), 2)
+        sales_year = round(sum(float(s.get("total") or 0) for s in sales_all if (s.get("accepted_at") or "") >= year_start), 2)
         return {
             "totals": {
                 "total_leads": total_leads,
                 "assigned_leads": active_leads,
                 "closed_leads": closed_leads,
-                "sales_month": 0,
-                "sales_year": 0,
-                "commission_earned": 0,
-                "commission_pending": 0,
+                "sales_month": sales_month,
+                "sales_year": sales_year,
+                "commission_earned": commission_earned,
+                "commission_pending": commission_pending,
                 "monthly_target": 0,
             },
             "leaderboard_rank": None,
             "upcoming_followups": [],
             "notifications": [
-                {"kind": "welcome", "title": "Welcome to ONCOST", "body": "Your partner portal is ready. Commission tracking will be enabled next."}
+                {"kind": "welcome", "title": "Welcome to ONCOST", "body": "Your partner portal is ready."}
             ],
             "partner_id": pid,
         }

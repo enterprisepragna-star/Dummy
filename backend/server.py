@@ -292,6 +292,7 @@ class QuotationIn(BaseModel):
     payment_terms: str = ""
     inclusions: str = ""
     terms_and_conditions: str = ""
+    partner_user_id: Optional[str] = None  # Attribute this quote to a partner for commission
 
 
 class QuotationEditIn(BaseModel):
@@ -602,6 +603,7 @@ async def _build_quotation_doc(q: QuotationIn) -> dict:
         "payment_terms": (q.payment_terms or "").strip() or DEFAULT_PAYMENT_TERMS,
         "inclusions": (q.inclusions or "").strip() or DEFAULT_INCLUSIONS,
         "terms_and_conditions": (q.terms_and_conditions or "").strip() or DEFAULT_TERMS,
+        "partner_user_id": (q.partner_user_id or None),
         "items": items_out,
         "subtotal": subtotal,
         "shipping_charges": shipping,
@@ -1493,12 +1495,20 @@ async def admin_accept_quotation(qid: str, payload: AcceptQuotationIn, _user=Dep
         "gst_amount": q.get("gst_amount", 0),
         "gst_percent": q.get("gst_percent", 0),
         "total": q.get("total", 0),
+        "partner_user_id": q.get("partner_user_id"),
         "accepted_at": iso(now_utc()),
         "accepted_by": "admin",
         "note": payload.note.strip(),
         "approved_budget": payload.approved_budget,
     }
     sres = await db.sales.insert_one(sale_doc)
+    sale_id = str(sres.inserted_id)
+    # Fire commission calc (best-effort). Returns None if no rule matches.
+    commission = None
+    try:
+        commission = await commissions_create_for_sale(db, sale_id=sale_id, sale_doc=sale_doc)
+    except Exception as _e:
+        logger.exception("Commission calc failed for sale %s", sale_id)
     await db.quotations.update_one(
         {"_id": ObjectId(qid)},
         {"$set": {
@@ -1511,6 +1521,7 @@ async def admin_accept_quotation(qid: str, payload: AcceptQuotationIn, _user=Dep
     )
     sale_doc["id"] = str(sres.inserted_id)
     sale_doc.pop("_id", None)
+    sale_doc["commission"] = commission
     return sale_doc
 
 
@@ -1586,6 +1597,7 @@ async def startup():
 
     # OPMS indexes
     await opms_ensure_indexes(db)
+    await commissions_ensure_indexes(db)
 
     # Seed pricing rule
     if not await db.pricing_rule.find_one({"_id": "default"}):
@@ -1641,6 +1653,17 @@ _opms_router = build_opms_router(
     images_dir=IMAGES_DIR,
 )
 app.include_router(_opms_router, prefix="/api")
+
+# ---------- Commission engine ----------
+from commissions import (  # noqa: E402
+    build_commissions_router,
+    create_commission_for_sale as commissions_create_for_sale,
+    ensure_indexes as commissions_ensure_indexes,
+)
+app.include_router(
+    build_commissions_router(db=db, get_current_user=get_current_user),
+    prefix="/api",
+)
 
 
 @app.get("/")

@@ -102,6 +102,11 @@ export default function PartnerDashboardPage() {
               <span className="inline-flex items-center gap-2"><Handshake size={13} /> Open My Leads</span>
               <ArrowRight size={13} />
             </a>
+            <a href="/partner/commissions" data-testid="partner-commissions-cta"
+              className="mt-2 inline-flex items-center justify-between w-full border border-zinc-300 hover:border-[#002FA7] px-3 py-2 text-sm">
+              <span className="inline-flex items-center gap-2"><Coins size={13} /> My Commissions</span>
+              <ArrowRight size={13} />
+            </a>
           </div>
         </div>
 

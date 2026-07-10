@@ -22,9 +22,12 @@ import PartnersPage from "@/pages/admin/PartnersPage";
 import PartnerDetailPage from "@/pages/admin/PartnerDetailPage";
 import LeadsPage from "@/pages/admin/LeadsPage";
 import LeadDetailPage from "@/pages/admin/LeadDetailPage";
+import CommissionRulesPage from "@/pages/admin/CommissionRulesPage";
+import CommissionsPage from "@/pages/admin/CommissionsPage";
 import PartnerRegisterPage from "@/pages/PartnerRegisterPage";
 import PartnerDashboardPage from "@/pages/PartnerDashboardPage";
 import PartnerLeadsPage from "@/pages/PartnerLeadsPage";
+import PartnerCommissionsPage from "@/pages/PartnerCommissionsPage";
 
 const Admin = ({ children }) => (
   <ProtectedRoute roles={["admin", "super_admin"]}>
@@ -49,6 +52,7 @@ export default function App() {
           <Route path="/partner" element={<Navigate to="/partner/dashboard" replace />} />
           <Route path="/partner/dashboard" element={<PartnerOnly><PartnerDashboardPage /></PartnerOnly>} />
           <Route path="/partner/leads" element={<PartnerOnly><PartnerLeadsPage /></PartnerOnly>} />
+          <Route path="/partner/commissions" element={<PartnerOnly><PartnerCommissionsPage /></PartnerOnly>} />
 
           <Route path="/admin" element={<Navigate to="/admin/products" replace />} />
           <Route path="/admin/products" element={<Admin><ProductsPage /></Admin>} />
@@ -63,6 +67,8 @@ export default function App() {
           <Route path="/admin/opms/partners/:id" element={<Admin><PartnerDetailPage /></Admin>} />
           <Route path="/admin/opms/leads" element={<Admin><LeadsPage /></Admin>} />
           <Route path="/admin/opms/leads/:id" element={<Admin><LeadDetailPage /></Admin>} />
+          <Route path="/admin/opms/commission-rules" element={<Admin><CommissionRulesPage /></Admin>} />
+          <Route path="/admin/opms/commissions" element={<Admin><CommissionsPage /></Admin>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

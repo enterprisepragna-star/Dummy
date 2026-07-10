@@ -121,3 +121,27 @@ Extends the existing FastAPI + React + Mongo app (no Next.js/Supabase migration)
 - Partner `/partner/leads` — Card grid of leads assigned to the logged-in partner + status chips + click-to-edit modal with allowed fields.
 - Partner Dashboard now has a "Open My Leads →" CTA.
 - Sidebar nav updated with `OPMS · Partner Mgmt → Leads`.
+
+## 2026-07-10 — Commission Engine (OPMS)
+**Backend `/app/backend/commissions.py`**:
+- **Commission Rules** (editable, no code changes): `name`, `applies_to_role` (or Any), `applies_to_category_id` (or Any), `partner_user_id` (or Any), `min_order_value`, `max_order_value`, `commission_percent`, `priority`, `active`. Match strategy: highest priority active rule whose all constraints pass.
+- **Commissions** collection: auto-created on quotation acceptance if quote has `partner_user_id`. Snapshot: order_amount, rule_id/name, %, amount, partner_user_id/name/employee_id/role, sale_id, quotation_id, customer info, status (pending|paid), UTR/reference/remarks/paid_at/paid_by.
+- Endpoints:
+  - `POST/GET/PUT/DELETE /api/commission-rules`
+  - `GET /api/commissions` (admin: all; partner: their own; `?status=` filter)
+  - `GET /api/commissions/summary` (pending/paid counts + amounts)
+  - `GET /api/commissions/{id}`
+  - `POST /api/commissions/{id}/pay` (payment_reference, utr_number, remarks)
+  - `POST /api/commissions/{id}/revert`
+- Quotation: added `partner_user_id` field (optional) — copied into sales and used to trigger commission calc.
+- Partner dashboard hydrates real commission_earned + commission_pending + sales_month + sales_year.
+
+**Frontend**:
+- Admin `/admin/opms/commission-rules` — full CRUD, priority up/down, on/off toggle, edit modal with role/category/order-range/percent inputs.
+- Admin `/admin/opms/commissions` — Payout Tracker with pending/paid KPIs, filter chips, search by partner/customer/UTR, Mark-paid modal (UTR + reference + remarks), Revert action.
+- Partner `/partner/commissions` — Read-only ledger with pending/paid KPIs, per-record details, UTR shown when paid.
+- New Quotation form: new "Attribute to a Partner (optional)" section — dropdown of approved partner users. Enables commission auto-calc.
+- Sidebar nav updated: Partners · Leads · Commission Rules · Payout Tracker.
+- Partner Dashboard: added "My Commissions →" CTA card.
+
+**Verified E2E**: Created 3 rules, attributed quote to a partner, accepted quote, saw correct rule matched by priority (large-order rule outranks default rule when min_order_value crossed), commission record generated, marked paid with UTR, summary correctly tallied.

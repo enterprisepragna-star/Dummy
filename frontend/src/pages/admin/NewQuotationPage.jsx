@@ -31,6 +31,9 @@ export default function NewQuotationPage() {
   const [discountValue, setDiscountValue] = useState("");
   const [discountLabel, setDiscountLabel] = useState("Discount");
   const [globalDisc, setGlobalDisc] = useState(null);
+  // Optional partner attribution — enables commission calc on acceptance
+  const [assignees, setAssignees] = useState([]);
+  const [partnerUserId, setPartnerUserId] = useState("");
   // Cart stores quantity as STRING so user can type freely (incl. empty)
   const [cart, setCart] = useState({}); // code -> {product, qtyText}
   const [busy, setBusy] = useState(false);
@@ -38,6 +41,7 @@ export default function NewQuotationPage() {
   useEffect(() => {
     api.get("/products").then(({ data }) => setProducts(data));
     api.get("/discount-config").then(({ data }) => setGlobalDisc(data)).catch(() => {});
+    api.get("/leads-assignees").then(({ data }) => setAssignees(data)).catch(() => {});
   }, []);
 
   const filtered = useMemo(() => {
@@ -127,6 +131,7 @@ export default function NewQuotationPage() {
         discount_type: discountType || null,
         discount_value: discountType ? (parseFloat(discountValue) || 0) : null,
         discount_label: discountType ? (discountLabel || "Discount").trim() : null,
+        partner_user_id: partnerUserId || null,
         subject: subject.trim(),
         delivery_timeline: deliveryTimeline.trim(),
         payment_terms: paymentTerms.trim(),
@@ -265,7 +270,27 @@ export default function NewQuotationPage() {
         </div>
       </div>
 
-      {/* Discount block */}
+      {/* Partner attribution for commission */}
+      <div className="mt-2 border border-zinc-200 bg-white p-5 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex-1">
+          <p className="overline text-[10px]">Attribute to a partner (optional)</p>
+          <p className="text-[11px] text-zinc-500 mt-1">
+            If this deal was brought in by a partner, pick them here. When the quote is accepted, a commission record
+            is auto-generated as per the active Commission Rules.
+          </p>
+        </div>
+        <select
+          value={partnerUserId}
+          onChange={(e) => setPartnerUserId(e.target.value)}
+          data-testid="newq-partner"
+          className="w-full sm:w-auto min-w-[240px] px-3 py-2 border border-zinc-300 bg-white text-sm outline-none"
+        >
+          <option value="">— No partner —</option>
+          {assignees.map(a => (
+            <option key={a.id} value={a.id}>{a.name} · {a.employee_id || a.email}</option>
+          ))}
+        </select>
+      </div>
       <div className="mt-2 border border-zinc-200 bg-white">
         <div className="px-5 py-3 border-b border-zinc-200 flex items-center justify-between bg-emerald-50/50">
           <div>
