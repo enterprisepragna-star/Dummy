@@ -7,6 +7,8 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminLayout from "@/components/AdminLayout";
 
 import LoginPage from "@/pages/LoginPage";
+import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import HomeRedirect from "@/pages/HomeRedirect";
 import PublicCatalogPage from "@/pages/PublicCatalogPage";
 import PublicQuotationPage from "@/pages/PublicQuotationPage";
@@ -47,6 +49,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomeRedirect />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/catalog" element={<PublicCatalogPage />} />
           <Route path="/q/:token" element={<PublicQuotationPage />} />
           <Route path="/partners/register" element={<PartnerRegisterPage />} />

@@ -136,6 +136,34 @@ def render_welcome_email(*, name: str, employee_id: str, partner_code: str,
     return _shell(body)
 
 
+def render_password_reset_email(*, name: str, reset_link: str, expires_hours: int = 24) -> str:
+    first = (name or "").split(" ")[0] or "there"
+    body = f"""
+      <p>Hi {first},</p>
+      <p>We received a request to reset the password for your ONCOST account.</p>
+      <p>Click the button below to choose a new password. This link is valid for the next
+         <b>{expires_hours} hours</b> and can be used only once.</p>
+
+      <p style="margin:22px 0;">
+        <a href="{reset_link}"
+           style="display:inline-block;background:#002FA7;color:#ffffff;text-decoration:none;
+                  padding:12px 22px;font-size:14px;">Reset my password →</a>
+      </p>
+
+      <p style="color:#6b7280;font-size:12px;">Button not working? Paste this URL into your browser:</p>
+      <p style="font-family:monospace;font-size:12px;word-break:break-all;color:#111827;
+                background:#F9FAFB;border:1px solid #E5E7EB;padding:10px;">{reset_link}</p>
+
+      <p style="color:#6b7280;font-size:12px;margin-top:22px;">
+        If you did not request this, you can safely ignore this email — your existing password
+        will continue to work.
+      </p>
+
+      <p style="margin-top:22px;">Team ONCOST</p>
+    """
+    return _shell(body)
+
+
 def render_lead_assigned_email(*, name: str, lead: dict, portal_path: str = "/partner/dashboard") -> str:
     link = portal_url(portal_path)
     body = f"""

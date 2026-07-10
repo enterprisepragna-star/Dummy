@@ -364,6 +364,17 @@ class ChangePasswordIn(BaseModel):
     new_password: str
 
 
+class ForgotPasswordIn(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    identifier: str  # email or Employee ID
+
+
+class ResetPasswordIn(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    token: str
+    new_password: str
+
+
 @api.post("/auth/change-password")
 async def change_password(payload: ChangePasswordIn, user=Depends(get_current_user)):
     if len(payload.new_password) < 8:
@@ -377,6 +388,119 @@ async def change_password(payload: ChangePasswordIn, user=Depends(get_current_us
                   "must_change_password": False}},
     )
     return {"ok": True}
+
+
+# ---------- Forgot / Reset password ----------
+PASSWORD_RESET_TTL_HOURS = 24
+
+
+@api.post("/auth/forgot-password")
+async def forgot_password(payload: ForgotPasswordIn):
+    """Generate a reset token for the account (admin or partner) and email a
+    reset link. Response is intentionally identical whether or not an account
+    exists — this prevents account enumeration."""
+    ident = (payload.identifier or "").strip()
+    generic_ok = {"ok": True, "message": "If an account exists for that identifier, a reset link has been sent."}
+    if not ident:
+        return generic_ok
+
+    if ident.upper().startswith("ONCOST-EMP-"):
+        user = await db.users.find_one({"employee_id": ident.upper()})
+    else:
+        user = await db.users.find_one({"email": ident.lower()})
+    if not user:
+        return generic_ok
+
+    email = user.get("email")
+    if not email:
+        return generic_ok
+
+    # Invalidate any prior unused tokens for this user so only the newest works.
+    await db.password_resets.update_many(
+        {"user_id": user["_id"], "used_at": None},
+        {"$set": {"used_at": now_utc(), "invalidated": True}},
+    )
+
+    token = secrets.token_urlsafe(32)
+    expires = now_utc() + timedelta(hours=PASSWORD_RESET_TTL_HOURS)
+    await db.password_resets.insert_one({
+        "user_id": user["_id"],
+        "email": email,
+        "token": token,
+        "created_at": now_utc(),
+        "expires_at": expires,
+        "used_at": None,
+    })
+
+    from emailer import portal_url, render_password_reset_email, send_email, is_enabled
+    reset_link = portal_url(f"/reset-password?token={token}")
+    name = (user.get("name") or user.get("full_name")
+            or (user.get("personal") or {}).get("full_name") or email)
+
+    if is_enabled():
+        try:
+            await send_email(
+                to=email,
+                subject="Reset your ONCOST password",
+                html=render_password_reset_email(
+                    name=name, reset_link=reset_link,
+                    expires_hours=PASSWORD_RESET_TTL_HOURS,
+                ),
+            )
+        except Exception as e:
+            logger.error("password reset email failed for %s: %s", email, e)
+    else:
+        logger.warning("Resend not configured — reset link for %s: %s", email, reset_link)
+
+    return generic_ok
+
+
+@api.post("/auth/reset-password")
+async def reset_password(payload: ResetPasswordIn):
+    token = (payload.token or "").strip()
+    new_pw = payload.new_password or ""
+    if len(new_pw) < 8:
+        raise HTTPException(400, "New password must be at least 8 characters")
+
+    rec = await db.password_resets.find_one({"token": token})
+    if not rec or rec.get("used_at") is not None:
+        raise HTTPException(400, "This reset link is invalid or has already been used")
+
+    exp = rec.get("expires_at")
+    if isinstance(exp, datetime):
+        exp_aware = exp if exp.tzinfo else exp.replace(tzinfo=timezone.utc)
+        if exp_aware < now_utc():
+            raise HTTPException(400, "This reset link has expired. Please request a new one.")
+
+    user = await db.users.find_one({"_id": rec["user_id"]})
+    if not user:
+        raise HTTPException(400, "Account no longer exists")
+
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"password_hash": hash_password(new_pw),
+                  "must_change_password": False}},
+    )
+    await db.password_resets.update_one(
+        {"_id": rec["_id"]},
+        {"$set": {"used_at": now_utc()}},
+    )
+    return {"ok": True, "email": user.get("email")}
+
+
+@api.get("/auth/reset-password/verify")
+async def verify_reset_token(token: str):
+    """Lightweight endpoint the reset page hits to check whether the token is
+    still valid before showing the form."""
+    rec = await db.password_resets.find_one({"token": (token or "").strip()})
+    if not rec or rec.get("used_at") is not None:
+        return {"valid": False, "reason": "invalid_or_used"}
+    exp = rec.get("expires_at")
+    if isinstance(exp, datetime):
+        exp_aware = exp if exp.tzinfo else exp.replace(tzinfo=timezone.utc)
+        if exp_aware < now_utc():
+            return {"valid": False, "reason": "expired"}
+    return {"valid": True, "email": rec.get("email")}
 
 
 # ---------- Pricing rule ----------
@@ -1594,6 +1718,9 @@ async def startup():
     await db.quotations.create_index("share_token", unique=True)
     await db.products.create_index("code", unique=True)
     await db.categories.create_index("name", unique=True)
+    await db.password_resets.create_index("token", unique=True)
+    # TTL index: Mongo deletes the doc automatically once expires_at passes.
+    await db.password_resets.create_index("expires_at", expireAfterSeconds=0)
 
     # Seed admin
     existing = await db.users.find_one({"email": ADMIN_EMAIL})

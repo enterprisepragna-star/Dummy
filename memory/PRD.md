@@ -145,3 +145,32 @@ Extends the existing FastAPI + React + Mongo app (no Next.js/Supabase migration)
 - Partner Dashboard: added "My Commissions →" CTA card.
 
 **Verified E2E**: Created 3 rules, attributed quote to a partner, accepted quote, saw correct rule matched by priority (large-order rule outranks default rule when min_order_value crossed), commission record generated, marked paid with UTR, summary correctly tallied.
+
+---
+
+## 2026-07-10 — Password Recovery (Forgot / Reset)
+
+**Backend** (`server.py`, `emailer.py`):
+- New collection `password_resets` with unique index on `token` and TTL index on `expires_at` (auto-cleanup by Mongo).
+- `POST /api/auth/forgot-password` — accepts `identifier` (email or Employee ID). Always returns generic 200 to prevent account enumeration. Prior unused tokens for the same user are invalidated so only the newest link works.
+- `POST /api/auth/reset-password` — accepts `token` + `new_password` (min 8 chars). Marks token used on success. Single-use.
+- `GET /api/auth/reset-password/verify?token=…` — cheap check the frontend calls to decide whether to show the form or the "invalid/expired" panel.
+- Reset link points to `PORTAL_URL + /reset-password?token=…` (uses live domain env).
+- Email dispatched via Resend using new `render_password_reset_email` template. If Resend not configured, link is logged (never blocks the flow).
+- Token TTL: **24 hours** (per user choice).
+
+**Frontend**:
+- New `/forgot-password` (`ForgotPasswordPage.jsx`) — identifier input, generic success confirmation, "send again" affordance.
+- New `/reset-password?token=…` (`ResetPasswordPage.jsx`) — verifies token, shows form for valid tokens, dedicated "expired" / "invalid" panel with a link to request a new one, redirects to `/login` after success.
+- `LoginPage.jsx` — added "Forgot password?" link under the password field.
+- Works for **both** admin and partner accounts (unified auth path).
+
+**Verified E2E** (curl + Playwright):
+- Unknown identifier → generic 200 (no enumeration).
+- Admin identifier → token created in Mongo, reset link generated.
+- Verify endpoint returns `{valid:true, email:…}` for fresh tokens, `{valid:false, reason:"invalid_or_used"}` otherwise.
+- Reset with <8 char password → 400.
+- Reset with correct token → 200, subsequent login works, second reuse of the same token → 400.
+- Frontend: forgot-password success screen, reset-password invalid-token panel render correctly.
+
+**Known constraint (unchanged)**: Resend still in testing mode → emails only deliver to `enterprisepragna@gmail.com` until the domain is verified on Resend. Any reset requested for other addresses still creates a valid token (visible in Mongo / logs) but the customer won't receive the email until the domain is verified.

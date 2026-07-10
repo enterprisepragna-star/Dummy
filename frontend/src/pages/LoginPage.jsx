@@ -103,6 +103,15 @@ export default function LoginPage() {
                   placeholder="••••••••"
                 />
               </div>
+              <div className="mt-2 text-right">
+                <a
+                  href="/forgot-password"
+                  data-testid="login-forgot-password"
+                  className="text-[11px] text-[#002FA7] hover:underline"
+                >
+                  Forgot password?
+                </a>
+              </div>
             </div>
 
             {err && (
