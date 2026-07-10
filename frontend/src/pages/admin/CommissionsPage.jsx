@@ -132,7 +132,9 @@ export default function CommissionsPage() {
                   </td>
                   <td className="p-3 text-right whitespace-nowrap">
                     {c.status === "pending" ? (
-                      <button onClick={() => setPayFor({ ...c })} data-testid={`pay-${c.id}`} className="text-xs text-[#002FA7] hover:underline">Mark paid →</button>
+                      c.eligible_for_payout
+                        ? <button onClick={() => setPayFor({ ...c })} data-testid={`pay-${c.id}`} className="text-xs text-[#002FA7] hover:underline">Mark paid →</button>
+                        : <span className="text-[10px] text-amber-700" title={`Partner has ₹${c.partner_pending_total?.toLocaleString('en-IN')} pending, need ₹${c.payout_threshold?.toLocaleString('en-IN')}`}>Below ₹1L</span>
                     ) : (
                       <button onClick={() => revert(c)} className="text-xs text-zinc-500 hover:text-red-600 inline-flex items-center gap-1"><RotateCcw size={11} /> Revert</button>
                     )}

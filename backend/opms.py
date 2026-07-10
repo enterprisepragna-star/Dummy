@@ -430,6 +430,30 @@ def build_opms_router(
         return {"filename": fname}
 
     # ================== ADMIN LIST / DETAIL ==================
+    @r.get("/partners/lookup")
+    async def lookup_partner(code: str = "", _user=Depends(_admin_only)):
+        """Look up a partner by employee_id, partner_code or referral_code."""
+        code = (code or "").strip()
+        if not code:
+            raise HTTPException(400, "code required")
+        p = await db.partners.find_one({"$or": [
+            {"employee_id": code}, {"partner_code": code}, {"referral_code": code},
+        ]})
+        if not p:
+            raise HTTPException(404, "No partner found for that code")
+        u = await db.users.find_one({"email": p.get("email")})
+        return {
+            "partner_id": str(p["_id"]),
+            "user_id": str(u["_id"]) if u else None,
+            "full_name": p.get("full_name"),
+            "employee_id": p.get("employee_id"),
+            "partner_code": p.get("partner_code"),
+            "referral_code": p.get("referral_code"),
+            "role": p.get("role"),
+            "email": p.get("email"),
+            "status": p.get("status"),
+        }
+
     @r.get("/partners")
     async def list_partners(status: Optional[str] = None, role: Optional[str] = None,
                             _user=Depends(_admin_only)):
@@ -567,9 +591,48 @@ def build_opms_router(
         if pid:
             p = await db.partners.find_one({"_id": ObjectId(pid)})
             if p:
-                out["partner"] = _serialize_partner(p, redact_sensitive=True)
+                out["partner"] = _serialize_partner(p, redact_sensitive=False)
         out["role_label"] = ROLE_LABEL.get(role, role)
         return out
+
+    @r.patch("/partner/me")
+    async def update_partner_me(payload: dict, request: Request):
+        """Partner self-updates their own KYC + bank fields. Cannot change role/status/IDs."""
+        user = await get_current_user(request)
+        pid = user.get("partner_id")
+        if not pid:
+            raise HTTPException(403, "Only partner accounts can use this endpoint")
+        allowed = {
+            "full_name", "gender", "dob", "aadhaar", "pan", "photo",
+            "mobile", "alt_mobile", "address", "city", "state", "pincode",
+            "linkedin", "languages", "previous_experience",
+            "account_holder", "account_number", "ifsc", "bank_name", "upi_id",
+            "emergency_name", "emergency_phone", "emergency_relation",
+        }
+        upd = {k: v for k, v in (payload or {}).items() if k in allowed and v is not None}
+        # If bank details are being updated, mark bank_verified = False again until re-approved.
+        if any(k in upd for k in ("account_holder", "account_number", "ifsc", "bank_name", "upi_id")):
+            upd["bank_verified"] = False
+            upd["bank_verified_at"] = None
+            upd["bank_verified_by"] = None
+        if not upd:
+            raise HTTPException(400, "No editable fields provided")
+        upd["updated_at"] = _iso(_now())
+        await db.partners.update_one({"_id": ObjectId(pid)}, {"$set": upd})
+        p = await db.partners.find_one({"_id": ObjectId(pid)})
+        return _serialize_partner(p, redact_sensitive=False)
+
+    @r.post("/partners/{pid}/verify-bank")
+    async def verify_bank(pid: str, _user=Depends(_admin_only)):
+        """Admin marks a partner's bank details as verified. Required before payouts."""
+        res = await db.partners.update_one(
+            {"_id": ObjectId(pid)},
+            {"$set": {"bank_verified": True, "bank_verified_at": _iso(_now()),
+                      "bank_verified_by": _user.get("email")}},
+        )
+        if res.matched_count == 0:
+            raise HTTPException(404, "Not found")
+        return {"ok": True}
 
     @r.get("/partner/dashboard")
     async def partner_dashboard(request: Request):

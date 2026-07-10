@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { ADMIN, AUTH } from "@/constants/testIds";
-import { Boxes, Package, Receipt, Settings2, LogOut, PlusSquare, Layers, Menu, X, CheckCircle2, FolderTree, Percent, UserPlus, Handshake, Coins, Wallet } from "lucide-react";
+import { Boxes, Package, Receipt, Settings2, LogOut, PlusSquare, Layers, Menu, X, CheckCircle2, FolderTree, Percent, UserPlus, Handshake, Coins, Wallet, Sparkles } from "lucide-react";
 
 const NavItem = ({ to, label, icon: Icon, testid, onClick }) => {
   const loc = useLocation();
@@ -63,6 +63,7 @@ export default function AdminLayout({ children }) {
         <NavItem to="/admin/opms/leads" label="Leads" icon={Handshake} testid="nav-leads" onClick={closeMobile} />
         <NavItem to="/admin/opms/commission-rules" label="Commission Rules" icon={Percent} testid="nav-commission-rules" onClick={closeMobile} />
         <NavItem to="/admin/opms/commissions" label="Payout Tracker" icon={Wallet} testid="nav-commissions" onClick={closeMobile} />
+        <NavItem to="/admin/opms/incentives" label="Incentives" icon={Sparkles} testid="nav-incentives" onClick={closeMobile} />
 
         <p className="overline px-5 mt-6 mb-2">Public</p>
         <NavItem to="/catalog" label="View Catalog" icon={Boxes} testid="nav-public-catalog" onClick={closeMobile} />

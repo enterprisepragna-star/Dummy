@@ -4,8 +4,12 @@
   is attributed to the quote.
 - Payment tracker: mark commission as paid with UTR / reference / remarks.
 - Partner view: read-only ledger of their own commissions.
+- Payout gate: per-sale >= threshold (default 1 lakh), cumulative pending must
+  also cross threshold before payout is eligible.
+- Discretionary Incentives (no threshold gate, admin-decided).
 """
 from __future__ import annotations
+import os
 from datetime import datetime, timezone
 from typing import List, Optional
 
@@ -15,6 +19,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 ADMIN_ROLES = {"super_admin", "admin"}
+PAYOUT_THRESHOLD = float(os.environ.get("PAYOUT_THRESHOLD", "100000") or 100000)
 
 
 def _now() -> datetime:
@@ -23,6 +28,15 @@ def _now() -> datetime:
 
 def _iso(dt: datetime) -> str:
     return dt.isoformat()
+
+
+DEFAULT_RULES = [
+    {"name": "Corporate Gifts",   "commission_percent": 5, "priority": 10, "min_order_value": PAYOUT_THRESHOLD, "active": True},
+    {"name": "Brass Products",    "commission_percent": 8, "priority": 10, "min_order_value": PAYOUT_THRESHOLD, "active": True},
+    {"name": "Customized Products","commission_percent": 6, "priority": 10, "min_order_value": PAYOUT_THRESHOLD, "active": True},
+    {"name": "Institution Orders","commission_percent": 4, "priority": 10, "min_order_value": PAYOUT_THRESHOLD, "active": True},
+    {"name": "Referral Orders",   "commission_percent": 3, "priority": 5,  "min_order_value": PAYOUT_THRESHOLD, "active": True},
+]
 
 
 # ------------------------------------------------------------------ MODELS
@@ -121,6 +135,9 @@ async def create_commission_for_sale(db, *, sale_id: str, sale_doc: dict) -> Opt
     if not partner_user_id:
         return None
     order_amount = float(sale_doc.get("total") or 0)
+    # Per-sale threshold gate (Option C part 1): sale must clear the payout threshold.
+    if order_amount < PAYOUT_THRESHOLD:
+        return None
     category_ids = await _sale_category_ids(db, sale_doc)
     rule = await find_matching_rule(
         db,
@@ -217,7 +234,19 @@ def build_commissions_router(db, get_current_user) -> APIRouter:
         if user.get("role") not in ADMIN_ROLES:
             q["partner_user_id"] = user.get("id")
         cur = db.commissions.find(q).sort([("created_at", -1)])
-        return [_serialize(x) for x in await cur.to_list(length=2000)]
+        items = [_serialize(x) for x in await cur.to_list(length=2000)]
+        # Per-partner pending totals for eligibility flag (Option C part 2)
+        pending_cur = db.commissions.find({"status": "pending"})
+        pending_by_partner: dict = {}
+        for c in await pending_cur.to_list(length=5000):
+            pid = c.get("partner_user_id")
+            pending_by_partner[pid] = pending_by_partner.get(pid, 0.0) + float(c.get("commission_amount") or 0)
+        for it in items:
+            total = pending_by_partner.get(it.get("partner_user_id"), 0.0)
+            it["partner_pending_total"] = round(total, 2)
+            it["eligible_for_payout"] = it["status"] == "paid" or total >= PAYOUT_THRESHOLD
+            it["payout_threshold"] = PAYOUT_THRESHOLD
+        return items
 
     @r.get("/commissions/summary")
     async def summary(request: Request = None):
@@ -254,6 +283,11 @@ def build_commissions_router(db, get_current_user) -> APIRouter:
             raise HTTPException(404, "Commission not found")
         if c.get("status") == "paid":
             raise HTTPException(400, "Already paid")
+        # Cumulative gate: partner's total pending must clear threshold.
+        pending_cur = db.commissions.find({"partner_user_id": c.get("partner_user_id"), "status": "pending"})
+        total_pending = sum(float(x.get("commission_amount") or 0) for x in await pending_cur.to_list(length=5000))
+        if total_pending < PAYOUT_THRESHOLD:
+            raise HTTPException(400, f"Payout blocked: partner has ₹{total_pending:,.0f} pending, below ₹{PAYOUT_THRESHOLD:,.0f} threshold")
         upd = {
             "status": "paid",
             "paid_at": _iso(_now()),
@@ -277,10 +311,100 @@ def build_commissions_router(db, get_current_user) -> APIRouter:
             raise HTTPException(404, "Paid commission not found")
         return {"ok": True}
 
+    # ============= INCENTIVES (discretionary — no threshold gate) =============
+    class IncentiveIn(BaseModel):
+        model_config = ConfigDict(extra="ignore")
+        partner_user_id: str
+        amount: float
+        reason: str = ""
+        contract_ref: str = ""    # e.g. multi-year contract identifier
+
+    class IncentivePayIn(BaseModel):
+        model_config = ConfigDict(extra="ignore")
+        payment_reference: str = ""
+        utr_number: str = ""
+        remarks: str = ""
+
+    @r.post("/incentives")
+    async def create_incentive(payload: IncentiveIn, _user=Depends(_admin_only)):
+        if payload.amount <= 0:
+            raise HTTPException(400, "Amount must be > 0")
+        partner_user = await db.users.find_one({"_id": ObjectId(payload.partner_user_id)})
+        if not partner_user:
+            raise HTTPException(404, "Partner user not found")
+        p = await db.partners.find_one({"email": partner_user.get("email")})
+        doc = {
+            "partner_user_id": payload.partner_user_id,
+            "partner_name": partner_user.get("name") or partner_user.get("email"),
+            "partner_employee_id": partner_user.get("employee_id"),
+            "partner_code": (p or {}).get("partner_code"),
+            "amount": float(payload.amount),
+            "reason": payload.reason.strip(),
+            "contract_ref": payload.contract_ref.strip(),
+            "status": "pending",
+            "created_at": _iso(_now()),
+            "created_by": _user.get("email"),
+            "paid_at": None,
+            "payment_reference": None,
+            "utr_number": None,
+            "remarks": None,
+        }
+        res = await db.incentives.insert_one(doc)
+        return _serialize(await db.incentives.find_one({"_id": res.inserted_id}))
+
+    @r.get("/incentives")
+    async def list_incentives(status: Optional[str] = None, request: Request = None):
+        user = await get_current_user(request)
+        q: dict = {}
+        if status:
+            q["status"] = status
+        if user.get("role") not in ADMIN_ROLES:
+            q["partner_user_id"] = user.get("id")
+        cur = db.incentives.find(q).sort([("created_at", -1)])
+        return [_serialize(x) for x in await cur.to_list(length=1000)]
+
+    @r.post("/incentives/{iid}/pay")
+    async def pay_incentive(iid: str, payload: IncentivePayIn, _user=Depends(_admin_only)):
+        inc = await db.incentives.find_one({"_id": ObjectId(iid)})
+        if not inc:
+            raise HTTPException(404, "Not found")
+        if inc.get("status") == "paid":
+            raise HTTPException(400, "Already paid")
+        await db.incentives.update_one({"_id": ObjectId(iid)}, {"$set": {
+            "status": "paid",
+            "paid_at": _iso(_now()),
+            "payment_reference": (payload.payment_reference or "").strip(),
+            "utr_number": (payload.utr_number or "").strip(),
+            "remarks": (payload.remarks or "").strip(),
+            "paid_by": _user.get("email"),
+        }})
+        return _serialize(await db.incentives.find_one({"_id": ObjectId(iid)}))
+
+    @r.delete("/incentives/{iid}")
+    async def delete_incentive(iid: str, _user=Depends(_admin_only)):
+        res = await db.incentives.delete_one({"_id": ObjectId(iid)})
+        if res.deleted_count == 0:
+            raise HTTPException(404, "Not found")
+        return {"ok": True}
+
     return r
 
 
 async def ensure_indexes(db):
+    await db.commission_rules.create_index([("priority", -1)])
+    await db.commissions.create_index("partner_user_id")
+    await db.commissions.create_index("status")
+    await db.commissions.create_index([("created_at", -1)])
+    await db.incentives.create_index("partner_user_id")
+    # Seed default rules on empty collection.
+    if await db.commission_rules.count_documents({}) == 0:
+        seeds = []
+        for base in DEFAULT_RULES:
+            seeds.append({**base, "applies_to_role": None, "applies_to_category_id": None,
+                          "partner_user_id": None, "max_order_value": None,
+                          "created_at": _iso(_now())})
+        if seeds:
+            await db.commission_rules.insert_many(seeds)
     await db.commission_rules.create_index([("priority", -1)])
     await db.commissions.create_index("partner_user_id")
     await db.commissions.create_index("status")

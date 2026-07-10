@@ -359,6 +359,26 @@ async def me(user=Depends(get_current_user)):
     return user
 
 
+class ChangePasswordIn(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@api.post("/auth/change-password")
+async def change_password(payload: ChangePasswordIn, user=Depends(get_current_user)):
+    if len(payload.new_password) < 8:
+        raise HTTPException(400, "New password must be at least 8 characters")
+    db_user = await db.users.find_one({"_id": ObjectId(user["id"])})
+    if not db_user or not verify_password(payload.current_password, db_user["password_hash"]):
+        raise HTTPException(401, "Current password is incorrect")
+    await db.users.update_one(
+        {"_id": ObjectId(user["id"])},
+        {"$set": {"password_hash": hash_password(payload.new_password),
+                  "must_change_password": False}},
+    )
+    return {"ok": True}
+
+
 # ---------- Pricing rule ----------
 @api.get("/pricing-rule")
 async def get_rule(_user=Depends(get_current_user)):

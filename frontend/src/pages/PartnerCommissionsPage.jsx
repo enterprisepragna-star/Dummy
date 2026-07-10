@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { LogOut, LayoutDashboard, Handshake, Coins, Clock, CheckCircle2 } from "lucide-react";
+import { Coins, Clock, CheckCircle2 } from "lucide-react";
+import { PartnerHeader } from "@/pages/PartnerProfilePage";
 
 export default function PartnerCommissionsPage() {
   const { logout } = useAuth();
@@ -29,19 +30,7 @@ export default function PartnerCommissionsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50">
-      <header className="bg-white border-b border-zinc-200">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <p className="font-display text-2xl">ONCOST <span className="text-zinc-400 text-xs">Partner</span></p>
-            <nav className="hidden sm:flex items-center gap-4 text-sm">
-              <a href="/partner/dashboard" className="text-zinc-500 hover:text-zinc-900 inline-flex items-center gap-1"><LayoutDashboard size={13} /> Dashboard</a>
-              <a href="/partner/leads" className="text-zinc-500 hover:text-zinc-900 inline-flex items-center gap-1"><Handshake size={13} /> My Leads</a>
-              <a href="/partner/commissions" className="text-[#002FA7] font-medium inline-flex items-center gap-1"><Coins size={13} /> Commissions</a>
-            </nav>
-          </div>
-          <button onClick={onLogout} className="text-xs text-zinc-500 hover:text-zinc-900 inline-flex items-center gap-1"><LogOut size={12} /> Sign out</button>
-        </div>
-      </header>
+      <PartnerHeader onLogout={onLogout} active="commissions" />
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         <p className="overline">Ledger</p>
