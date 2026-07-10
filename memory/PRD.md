@@ -100,3 +100,24 @@ Extends the existing FastAPI + React + Mongo app (no Next.js/Supabase migration)
 - Lead Management, Sales entry, Commission Engine, Payment Tracker, Performance module, Reports, Notifications, Search — all deferred to subsequent MVP iterations. Dashboard cards are stubbed with zeros to match the final shape.
 - Password reset & OTP flows — pending.
 - Row-level security equivalent — implemented at the API layer (admin-only endpoints check `role in {admin, super_admin}`); Mongo doesn't have RLS.
+
+## 2026-07-10 — Resend email + Lead Management (OPMS)
+**Email (Resend)**: New `emailer.py` with `is_enabled`, `send_email`, `render_welcome_email`, `render_lead_assigned_email`. Uses `resend>=2.0.0`, keyed off `RESEND_API_KEY` env. Sender defaults to `onboarding@resend.dev` (testing mode) until a domain is verified in resend.com. Falls back silently to no-op if key missing.
+- Wired into `POST /api/partners/{id}/approve` — approval response now includes `email_status` field.
+- Wired into `POST /api/leads` (new lead with assignee) and `POST /api/leads/{id}/assign`.
+- Note: In Resend testing mode, emails only deliver to the account owner's verified address. Real delivery to arbitrary partners requires a verified domain.
+
+**Lead Management (MVP)**: Full CRUD in `opms.py`.
+- Schema: `leads` collection {name, company, industry, contact_person, designation, phone, email, source, status, notes, estimated_value, assigned_to (user_id), assigned_at, created_by, created_at, updated_at, closed_at, lost_reason}.
+- Statuses: new → contacted → quotation_sent → negotiation → won/lost.
+- Sources: LinkedIn, Apollo, Referral, Website, Walk-in, Cold Call, Event, Other.
+- Endpoints: `POST/GET /api/leads`, `GET/PATCH/DELETE /api/leads/{id}`, `POST /api/leads/{id}/assign`, `GET /api/leads-assignees` (list eligible partner users for dropdowns).
+- RBAC: admin sees & edits all leads; partner sees & edits only their assigned leads (allowed fields: status, notes, contact_person, phone, email, designation, estimated_value, lost_reason).
+- Partner dashboard `total_leads`, `closed_leads`, `assigned_leads` now hydrate from real DB counts.
+
+**Frontend**:
+- Admin `/admin/opms/leads` — KPI strip (Pipeline / Won / Active / Assignees), status chips, search, table with hydrated `assigned_to_name` + `assigned_to_employee_id`. `+ New Lead` modal.
+- Admin `/admin/opms/leads/:id` — Full edit page with sections (Company & Contact, Sales, Assignment with reassign dropdown that fires email, Notes, System metadata).
+- Partner `/partner/leads` — Card grid of leads assigned to the logged-in partner + status chips + click-to-edit modal with allowed fields.
+- Partner Dashboard now has a "Open My Leads →" CTA.
+- Sidebar nav updated with `OPMS · Partner Mgmt → Leads`.

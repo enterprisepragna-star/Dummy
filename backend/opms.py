@@ -22,6 +22,13 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, EmailStr
 
+from emailer import (
+    is_enabled as email_enabled,
+    render_lead_assigned_email,
+    render_welcome_email,
+    send_email,
+)
+
 
 # ------------------------------------------------------------------ ROLES
 ROLES = [
@@ -100,6 +107,44 @@ class PartnerRegisterIn(BaseModel):
 
 class PartnerDecisionIn(BaseModel):
     reason: str = ""
+
+
+# ------------------------------------------------------------------ LEAD MODELS
+LEAD_STATUSES = ["new", "contacted", "quotation_sent", "negotiation", "won", "lost"]
+LEAD_SOURCES = ["LinkedIn", "Apollo", "Referral", "Website", "Walk-in", "Cold Call", "Event", "Other"]
+
+
+class LeadIn(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    name: str
+    company: str = ""
+    industry: str = ""
+    contact_person: str = ""
+    designation: str = ""
+    phone: str = ""
+    email: str = ""
+    source: str = "Other"
+    status: str = "new"
+    notes: str = ""
+    estimated_value: float = 0
+    assigned_to: Optional[str] = None   # user_id (of the partner login user), NOT partner_id
+
+
+class LeadPatch(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    name: Optional[str] = None
+    company: Optional[str] = None
+    industry: Optional[str] = None
+    contact_person: Optional[str] = None
+    designation: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    source: Optional[str] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+    estimated_value: Optional[float] = None
+    assigned_to: Optional[str] = None
+    lost_reason: Optional[str] = None
 
 
 # ------------------------------------------------------------------ HELPERS
@@ -446,7 +491,22 @@ def build_opms_router(
             "approved_by": _user.get("email"),
         }
         await db.partners.update_one({"_id": ObjectId(pid)}, {"$set": update})
-        return {**gen, "temp_password": temp_pw, "email": p["email"], "role": role, "joining_date": update["joining_date"]}
+        # Fire welcome email (best-effort; will silently no-op if Resend not configured)
+        try:
+            html = render_welcome_email(
+                name=p.get("full_name", ""),
+                employee_id=gen["employee_id"],
+                partner_code=gen["partner_code"],
+                referral_code=gen["referral_code"],
+                login_email=p["email"],
+                temp_password=temp_pw,
+                role_label=ROLE_LABEL.get(role, role),
+            )
+            email_res = await send_email(p["email"], "Welcome to ONCOST — Your Partner ID is ready", html)
+        except Exception as e:
+            email_res = {"ok": False, "reason": str(e)}
+        return {**gen, "temp_password": temp_pw, "email": p["email"], "role": role,
+                "joining_date": update["joining_date"], "email_status": email_res}
 
     @r.post("/partners/{pid}/reject")
     async def reject(pid: str, payload: PartnerDecisionIn, _user=Depends(_admin_only)):
@@ -515,12 +575,16 @@ def build_opms_router(
     async def partner_dashboard(request: Request):
         user = await get_current_user(request)
         pid = user.get("partner_id")
-        # MVP-1 numbers: leads / sales / commission all zero until modules land.
+        # Real lead counts (Sales/commission still stubbed until those modules exist)
+        my_id = user.get("id")
+        total_leads = await db.leads.count_documents({"assigned_to": my_id})
+        closed_leads = await db.leads.count_documents({"assigned_to": my_id, "status": "won"})
+        active_leads = await db.leads.count_documents({"assigned_to": my_id, "status": {"$nin": ["won", "lost"]}})
         return {
             "totals": {
-                "total_leads": 0,
-                "assigned_leads": 0,
-                "closed_leads": 0,
+                "total_leads": total_leads,
+                "assigned_leads": active_leads,
+                "closed_leads": closed_leads,
                 "sales_month": 0,
                 "sales_year": 0,
                 "commission_earned": 0,
@@ -530,10 +594,172 @@ def build_opms_router(
             "leaderboard_rank": None,
             "upcoming_followups": [],
             "notifications": [
-                {"kind": "welcome", "title": "Welcome to ONCOST", "body": "Your partner portal is ready. Leads and commission tracking modules will be enabled soon."}
+                {"kind": "welcome", "title": "Welcome to ONCOST", "body": "Your partner portal is ready. Commission tracking will be enabled next."}
             ],
             "partner_id": pid,
         }
+
+    # ============================ LEADS ============================
+    def _serialize_lead(l: dict) -> dict:
+        out = dict(l)
+        out["id"] = str(out.pop("_id"))
+        return out
+
+    async def _lead_or_404(lid: str) -> dict:
+        l = await db.leads.find_one({"_id": ObjectId(lid)})
+        if not l:
+            raise HTTPException(404, "Lead not found")
+        return l
+
+    def _validate_lead_fields(payload: dict):
+        st = payload.get("status")
+        if st and st not in LEAD_STATUSES:
+            raise HTTPException(400, f"Invalid status. One of: {LEAD_STATUSES}")
+        src = payload.get("source")
+        if src and src not in LEAD_SOURCES:
+            # Accept custom sources as free text but nudge convention
+            pass
+
+    async def _fetch_assignee(user_id: Optional[str]) -> Optional[dict]:
+        if not user_id:
+            return None
+        try:
+            return await db.users.find_one({"_id": ObjectId(user_id)})
+        except Exception:
+            return None
+
+    async def _hydrate_lead(l: dict) -> dict:
+        out = _serialize_lead(l)
+        assignee = await _fetch_assignee(out.get("assigned_to"))
+        if assignee:
+            out["assigned_to_name"] = assignee.get("name") or assignee.get("email")
+            out["assigned_to_employee_id"] = assignee.get("employee_id")
+        return out
+
+    @r.post("/leads")
+    async def create_lead(payload: LeadIn, _user=Depends(_admin_only)):
+        body = payload.model_dump()
+        _validate_lead_fields(body)
+        body["created_at"] = _iso(_now())
+        body["created_by"] = _user.get("email")
+        body["assigned_at"] = _iso(_now()) if body.get("assigned_to") else None
+        res = await db.leads.insert_one(body)
+        lid = str(res.inserted_id)
+        # Fire assignment email if creating with an assignee.
+        if body.get("assigned_to"):
+            assignee = await _fetch_assignee(body["assigned_to"])
+            if assignee and assignee.get("email"):
+                html = render_lead_assigned_email(name=assignee.get("name", ""), lead={**body, "id": lid})
+                await send_email(assignee["email"], f"New lead assigned: {body.get('name', '')}", html)
+        return await _hydrate_lead(await db.leads.find_one({"_id": ObjectId(lid)}))
+
+    @r.get("/leads")
+    async def list_leads(status: Optional[str] = None,
+                         source: Optional[str] = None,
+                         mine: bool = False,
+                         request: Request = None):
+        user = await get_current_user(request)
+        role = user.get("role", "")
+        q: dict = {}
+        if status:
+            q["status"] = status
+        if source:
+            q["source"] = source
+        # Partner: only their own leads. Admin: all leads.
+        if role not in ADMIN_ROLES:
+            q["assigned_to"] = user["id"]
+        elif mine:
+            q["assigned_to"] = user["id"]
+        cur = db.leads.find(q).sort("created_at", -1)
+        out = []
+        for l in await cur.to_list(length=2000):
+            out.append(await _hydrate_lead(l))
+        return out
+
+    @r.get("/leads/{lid}")
+    async def get_lead(lid: str, request: Request):
+        user = await get_current_user(request)
+        l = await _lead_or_404(lid)
+        role = user.get("role", "")
+        if role not in ADMIN_ROLES and l.get("assigned_to") != user["id"]:
+            raise HTTPException(403, "You don't have access to this lead")
+        return await _hydrate_lead(l)
+
+    @r.patch("/leads/{lid}")
+    async def patch_lead(lid: str, payload: LeadPatch, request: Request):
+        user = await get_current_user(request)
+        l = await _lead_or_404(lid)
+        role = user.get("role", "")
+        is_admin = role in ADMIN_ROLES
+        update = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if v is not None or k == "assigned_to"}
+        _validate_lead_fields(update)
+        # Non-admin partners: can only update status / notes / lost_reason / contact edits on THEIR lead.
+        if not is_admin:
+            if l.get("assigned_to") != user["id"]:
+                raise HTTPException(403, "You don't have access to this lead")
+            allowed = {"status", "notes", "phone", "email", "contact_person", "designation", "lost_reason", "estimated_value"}
+            update = {k: v for k, v in update.items() if k in allowed}
+        # Track close time
+        prev_status = l.get("status")
+        new_status = update.get("status", prev_status)
+        if new_status in ("won", "lost") and prev_status not in ("won", "lost"):
+            update["closed_at"] = _iso(_now())
+        # If admin re-assigns, notify the new assignee
+        notify_new_assignee = False
+        if is_admin and "assigned_to" in update and update["assigned_to"] != l.get("assigned_to"):
+            update["assigned_at"] = _iso(_now()) if update["assigned_to"] else None
+            notify_new_assignee = bool(update.get("assigned_to"))
+        update["updated_at"] = _iso(_now())
+        await db.leads.update_one({"_id": ObjectId(lid)}, {"$set": update})
+        doc = await db.leads.find_one({"_id": ObjectId(lid)})
+        if notify_new_assignee:
+            assignee = await _fetch_assignee(update["assigned_to"])
+            if assignee and assignee.get("email"):
+                html = render_lead_assigned_email(name=assignee.get("name", ""), lead=_serialize_lead(doc))
+                await send_email(assignee["email"], f"New lead assigned: {doc.get('name', '')}", html)
+        return await _hydrate_lead(doc)
+
+    @r.post("/leads/{lid}/assign")
+    async def assign_lead(lid: str, payload: dict, _user=Depends(_admin_only)):
+        assignee_id = (payload or {}).get("user_id")
+        if not assignee_id:
+            raise HTTPException(400, "user_id required")
+        assignee = await _fetch_assignee(assignee_id)
+        if not assignee:
+            raise HTTPException(404, "Assignee (partner user) not found")
+        await db.leads.update_one(
+            {"_id": ObjectId(lid)},
+            {"$set": {"assigned_to": assignee_id, "assigned_at": _iso(_now()), "updated_at": _iso(_now())}},
+        )
+        doc = await db.leads.find_one({"_id": ObjectId(lid)})
+        html = render_lead_assigned_email(name=assignee.get("name", ""), lead=_serialize_lead(doc))
+        email_res = await send_email(assignee["email"], f"New lead assigned: {doc.get('name', '')}", html)
+        return {"ok": True, "email": email_res}
+
+    @r.delete("/leads/{lid}")
+    async def delete_lead(lid: str, _user=Depends(_admin_only)):
+        res = await db.leads.delete_one({"_id": ObjectId(lid)})
+        if res.deleted_count == 0:
+            raise HTTPException(404, "Lead not found")
+        return {"ok": True}
+
+    @r.get("/leads-assignees")
+    async def list_assignees(_user=Depends(_admin_only)):
+        """List approved partner users who can be assigned leads."""
+        cur = db.users.find(
+            {"role": {"$in": ["sales_partner", "sales_executive", "sales_manager",
+                              "franchise_partner", "procurement_partner"]}}
+        )
+        out = []
+        for u in await cur.to_list(length=1000):
+            out.append({
+                "id": str(u["_id"]),
+                "name": u.get("name") or u.get("email"),
+                "email": u.get("email"),
+                "employee_id": u.get("employee_id"),
+                "role": u.get("role"),
+            })
+        return out
 
     return r
 
@@ -546,3 +772,6 @@ async def ensure_indexes(db):
     await db.partners.create_index("partner_code")
     await db.partners.create_index("referral_code", unique=True, sparse=True)
     await db.users.create_index("employee_id", sparse=True)
+    await db.leads.create_index("assigned_to")
+    await db.leads.create_index("status")
+    await db.leads.create_index([("created_at", -1)])

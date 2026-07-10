@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api, { imageUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { LogOut, TrendingUp, Users, ShoppingBag, Coins, Award, Bell, User2, Copy } from "lucide-react";
+import { LogOut, TrendingUp, Users, ShoppingBag, Coins, Award, Bell, User2, Copy, Handshake, ArrowRight } from "lucide-react";
 
 export default function PartnerDashboardPage() {
   const { logout } = useAuth();
@@ -97,6 +97,11 @@ export default function PartnerDashboardPage() {
                 ))}
               </ul>
             )}
+            <a href="/partner/leads" data-testid="partner-my-leads-cta"
+              className="mt-5 inline-flex items-center justify-between w-full bg-[#002FA7] hover:bg-[#002277] text-white px-3 py-2 text-sm">
+              <span className="inline-flex items-center gap-2"><Handshake size={13} /> Open My Leads</span>
+              <ArrowRight size={13} />
+            </a>
           </div>
         </div>
 

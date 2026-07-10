@@ -20,8 +20,11 @@ import QuotationDetailPage from "@/pages/admin/QuotationDetailPage";
 import SalesPage from "@/pages/admin/SalesPage";
 import PartnersPage from "@/pages/admin/PartnersPage";
 import PartnerDetailPage from "@/pages/admin/PartnerDetailPage";
+import LeadsPage from "@/pages/admin/LeadsPage";
+import LeadDetailPage from "@/pages/admin/LeadDetailPage";
 import PartnerRegisterPage from "@/pages/PartnerRegisterPage";
 import PartnerDashboardPage from "@/pages/PartnerDashboardPage";
+import PartnerLeadsPage from "@/pages/PartnerLeadsPage";
 
 const Admin = ({ children }) => (
   <ProtectedRoute roles={["admin", "super_admin"]}>
@@ -45,6 +48,7 @@ export default function App() {
 
           <Route path="/partner" element={<Navigate to="/partner/dashboard" replace />} />
           <Route path="/partner/dashboard" element={<PartnerOnly><PartnerDashboardPage /></PartnerOnly>} />
+          <Route path="/partner/leads" element={<PartnerOnly><PartnerLeadsPage /></PartnerOnly>} />
 
           <Route path="/admin" element={<Navigate to="/admin/products" replace />} />
           <Route path="/admin/products" element={<Admin><ProductsPage /></Admin>} />
@@ -57,6 +61,8 @@ export default function App() {
           <Route path="/admin/sales" element={<Admin><SalesPage /></Admin>} />
           <Route path="/admin/opms/partners" element={<Admin><PartnersPage /></Admin>} />
           <Route path="/admin/opms/partners/:id" element={<Admin><PartnerDetailPage /></Admin>} />
+          <Route path="/admin/opms/leads" element={<Admin><LeadsPage /></Admin>} />
+          <Route path="/admin/opms/leads/:id" element={<Admin><LeadDetailPage /></Admin>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
