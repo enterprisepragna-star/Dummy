@@ -74,3 +74,29 @@ User clarifications:
 - **Quotation Detail — Edit charges panel** — Collapsible section on QuotationDetailPage with inputs for all editable fields; on Save it PATCHes the quote and reloads.
 - **PDF totals table** — Now conditionally renders Packaging, Branding, Shipping, Less: Discount lines (green), then GST, then Grand Total. Legacy quotes without new fields render unchanged.
 - **Bug fixes**: `PUT /api/pricing-rule` now propagates `active` field; GET defaults `active: true` for legacy docs.
+
+## 2026-07-10 — OPMS (Partner Management System) MVP-1
+Extends the existing FastAPI + React + Mongo app (no Next.js/Supabase migration).
+
+**Backend** (`/app/backend/opms.py` module wired into server.py):
+- 8 roles seeded: super_admin, admin, sales_manager, sales_executive, sales_partner, procurement_partner, franchise_partner, viewer.
+- Endpoints: `POST /api/partners/register` (public), `POST /api/partners/upload?kind=` (uploads photo/resume/PAN/Aadhaar via Emergent Object Storage), `GET /api/partners` (admin, filter status+role), `GET /api/partners/{id}`, `POST /api/partners/{id}/approve|reject|suspend`, `GET /api/partners/{id}/id-card.pdf` (business-card sized PDF w/ QR), `GET /api/partner/me`, `GET /api/partner/dashboard`.
+- Approve action: atomically increments `opms_counters.employee`, generates `ONCOST-EMP-{4-digit}`, `OC{RolePrefix}{4-digit}` partner code, `ONCOST{2-digit}` referral code, sets joining_date + card_valid_until (+365 days), creates login user in `users` collection with random temp password (returned once to admin).
+- Login endpoint extended: accepts `identifier` field which may be Email OR Employee ID (`ONCOST-EMP-XXXX`); legacy `email` field still supported.
+- All admin users backfilled with `role: "admin"` at startup.
+- ID Card PDF: 85.6×54 mm landscape, ONCOST navy header + gold rule, photo box, name, role, emp id, partner code, joining date, emergency contact, VALID UNTIL, QR code (encodes emp id + partner code + mobile).
+
+**Frontend**:
+- Public **/partners/register** — 4-step wizard (Personal → Contact → Professional → Bank + Emergency) with document uploads.
+- Admin **/admin/opms/partners** — stat pills by status + search + role filter + table.
+- **/admin/opms/partners/:id** — full detail view with sections + Approve / Reject / Suspend actions; on approve, credentials (emp id / partner code / referral code / login email / temp password) surfaced in a success banner with copy buttons.
+- ID Card PDF download button on approved partners.
+- Partner **/partner/dashboard** — KPI grid (leads/sales/commission all zero until modules land), codes card, notifications feed, coming-soon strip.
+- Login page now accepts Email or Employee ID; login button routes admins → /admin, partners → /partner/dashboard based on role.
+- ProtectedRoute now supports `roles=[...]` param; admin pages restricted to `admin`/`super_admin`.
+
+**Known limitations (documented for next iteration)**:
+- Email automation (welcome email w/ credentials) not wired — admin must share credentials manually via the success banner. Adding Resend/SendGrid will drop this in.
+- Lead Management, Sales entry, Commission Engine, Payment Tracker, Performance module, Reports, Notifications, Search — all deferred to subsequent MVP iterations. Dashboard cards are stubbed with zeros to match the final shape.
+- Password reset & OTP flows — pending.
+- Row-level security equivalent — implemented at the API layer (admin-only endpoints check `role in {admin, super_admin}`); Mongo doesn't have RLS.

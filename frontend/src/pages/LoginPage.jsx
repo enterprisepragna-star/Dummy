@@ -13,7 +13,7 @@ function formatErr(detail) {
 }
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("admin@oncost.shop");
+  const [identifier, setIdentifier] = useState("admin@oncost.shop");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -24,9 +24,10 @@ export default function LoginPage() {
     e.preventDefault();
     setBusy(true); setErr("");
     try {
-      await login(email, password);
+      const u = await login(identifier, password);
       toast.success("Welcome to ONCOST");
-      nav("/admin");
+      const role = u?.role || "admin";
+      nav(role === "admin" || role === "super_admin" ? "/admin" : "/partner/dashboard");
     } catch (e) {
       setErr(formatErr(e.response?.data?.detail) || e.message);
     } finally {
@@ -73,19 +74,20 @@ export default function LoginPage() {
 
           <div className="mt-8 space-y-4">
             <div>
-              <label className="overline text-[10px]">Email</label>
+              <label className="overline text-[10px]">Email or Employee ID</label>
               <div className="mt-2 relative">
                 <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input
                   data-testid={AUTH.loginEmail}
                   required
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="text"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   className="w-full pl-9 pr-3 py-3 border border-zinc-300 focus:border-[#002FA7] focus:ring-2 focus:ring-[#002FA7]/20 text-sm outline-none transition-all"
-                  placeholder="admin@oncost.shop"
+                  placeholder="admin@oncost.shop  or  ONCOST-EMP-0001"
                 />
               </div>
+              <p className="text-[11px] text-zinc-400 mt-1">Partners can sign in with their Employee ID.</p>
             </div>
             <div>
               <label className="overline text-[10px]">Password</label>
@@ -120,7 +122,10 @@ export default function LoginPage() {
           </div>
 
           <p className="text-[11px] text-zinc-500 mt-8 leading-relaxed">
-            Need help? Reach the platform team for password resets.
+            Not a partner yet?{" "}
+            <a href="/partners/register" className="text-[#002FA7] underline">
+              Apply to join the ONCOST network →
+            </a>
           </p>
         </form>
       </div>

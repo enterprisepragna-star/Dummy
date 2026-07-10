@@ -201,7 +201,11 @@ api = APIRouter(prefix="/api")
 
 # ---------- Models ----------
 class LoginIn(BaseModel):
-    email: EmailStr
+    # `email` remains for backwards compatibility; also accepts an `identifier`
+    # which may be an email or an Employee ID (e.g. ONCOST-EMP-0001).
+    model_config = ConfigDict(extra="ignore")
+    email: Optional[str] = None
+    identifier: Optional[str] = None
     password: str
 
 
@@ -320,16 +324,25 @@ class DiscountConfig(BaseModel):
 # ---------- Auth endpoints ----------
 @api.post("/auth/login")
 async def login(payload: LoginIn, response: Response):
-    user = await db.users.find_one({"email": payload.email.lower()})
+    ident = (payload.identifier or payload.email or "").strip()
+    if not ident:
+        raise HTTPException(status_code=400, detail="Email or Employee ID required")
+    # Employee ID starts with ONCOST-EMP-, otherwise treat as email.
+    if ident.upper().startswith("ONCOST-EMP-"):
+        user = await db.users.find_one({"employee_id": ident.upper()})
+    else:
+        user = await db.users.find_one({"email": ident.lower()})
     if not user or not verify_password(payload.password, user["password_hash"]):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_access_token(str(user["_id"]), user["email"])
     response.set_cookie(
         key="access_token", value=token,
         httponly=True, secure=True, samesite="none",
         max_age=7 * 24 * 3600, path="/",
     )
-    return {"user": serialize_doc(user), "access_token": token}
+    out = serialize_doc(user)
+    out["role"] = user.get("role", "admin")
+    return {"user": out, "access_token": token}
 
 
 @api.post("/auth/logout")
@@ -340,6 +353,8 @@ async def logout(response: Response, _user=Depends(get_current_user)):
 
 @api.get("/auth/me")
 async def me(user=Depends(get_current_user)):
+    if "role" not in user:
+        user["role"] = "admin"
     return user
 
 
@@ -1566,6 +1581,11 @@ async def startup():
             {"$set": {"password_hash": hash_password(ADMIN_PASSWORD)}},
         )
         logger.info("Admin password updated from env")
+    # Backfill role for any legacy admin user missing it
+    await db.users.update_many({"role": {"$exists": False}}, {"$set": {"role": "admin"}})
+
+    # OPMS indexes
+    await opms_ensure_indexes(db)
 
     # Seed pricing rule
     if not await db.pricing_rule.find_one({"_id": "default"}):
@@ -1607,6 +1627,20 @@ async def shutdown():
 
 
 app.include_router(api)
+
+# ---------- OPMS module ----------
+from opms import build_opms_router, ensure_indexes as opms_ensure_indexes  # noqa: E402
+_opms_router = build_opms_router(
+    db=db,
+    get_current_user=get_current_user,
+    hash_password=hash_password,
+    create_access_token=create_access_token,
+    put_object=put_object,
+    build_storage_path=build_storage_path,
+    get_object=get_object,
+    images_dir=IMAGES_DIR,
+)
+app.include_router(_opms_router, prefix="/api")
 
 
 @app.get("/")
