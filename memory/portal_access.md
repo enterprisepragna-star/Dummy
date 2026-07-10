@@ -1,6 +1,10 @@
 # ONCOST — Portal Access Reference
 _Last updated: 10 Jul 2026_
 
+> **Security note**: this file is committed to the local Emergent git repo. Never write
+> plaintext passwords or API keys in it. All secrets live only in `backend/.env`
+> (preview) and the **Emergent Deployment Secrets Panel** (production).
+
 > **Domain in transition**: once you re-link `oncostcatalog.in` at the **root** in
 > Emergent Dashboard → Home → Deployment → **Link Domain** (no `/catalog` suffix),
 > every URL below will be reachable on the new domain. Until then the old
@@ -8,7 +12,7 @@ _Last updated: 10 Jul 2026_
 
 ---
 
-## 1. Live URLs — after domain is mapped at the root
+## 1. Live URLs — after the domain is mapped at the root
 
 ### Public (no login required)
 | Purpose | URL |
@@ -54,27 +58,32 @@ _Last updated: 10 Jul 2026_
 
 ---
 
-## 2. Login credentials
+## 2. Login accounts
 
 ### Admin (super admin — full access)
 | Field | Value |
 | --- | --- |
 | Email | `admin@oncost.shop` |
-| Password | `oncost@2026` |
+| Password | _(rotated on 10 Jul 2026 — kept only in Emergent Deployment Secrets Panel and locally by owner)_ |
 | Role | `admin` |
-| Notes | Login also accepts your registered email OR your Employee ID (partners). Change the password after first login via the "Forgot password?" flow or by asking me to update `ADMIN_PASSWORD` in the deployment secrets. |
+| Password last rotated | **2026-07-10** |
+| Next rotation due | **2026-10-08** _(90-day policy — see §4)_ |
+
+> To change the password: update `ADMIN_PASSWORD` in `backend/.env` (preview) and in the
+> **Emergent Deployment Secrets Panel** (production), then restart / redeploy. The startup
+> hook re-hashes the admin password from the env value automatically.
 
 ### Partners (approved, live in the system)
-| Full name | Employee ID | Email (login) | Referral code | Password |
-| --- | --- | --- | --- | --- |
-| Deepa Iyer | `ONCOST-EMP-0001` | `deepa.iyer@example.com` | `ONCOST01` | _Temporary password was shown once on approval and sent via welcome email. Partner is flagged `must_change_password=true`, so they'll be prompted to reset on first login._ |
+| Full name | Employee ID | Email (login) | Referral code |
+| --- | --- | --- | --- |
+| Deepa Iyer | `ONCOST-EMP-0001` | `deepa.iyer@example.com` | `ONCOST01` |
 
-> **How to recover a partner's password**
-> - The partner can go to `/forgot-password`, enter their email or Employee ID, and get a reset link valid for 24 hours.
-> - Or, from the Admin → OPMS → Partner detail page, use the (upcoming) "Force password reset" action once we build it (mentioned in next action items).
-> - Alternatively, ask me to issue a fresh temporary password from Mongo — just say which partner.
+Partner passwords are stored as **bcrypt hashes** and cannot be read back by anyone
+(including the agent). Recovery paths:
 
-> **Passwords are stored as bcrypt hashes** — nobody, including me, can read the plaintext of an existing partner password. You can only reset it.
+- Partner → `/forgot-password` (email or Employee ID) → reset link valid 24 hrs.
+- Admin can trigger a fresh temp password by asking the agent to reset one for a
+  specific partner (a "Force password reset" admin action is on the backlog).
 
 ---
 
@@ -86,54 +95,73 @@ _Last updated: 10 Jul 2026_
 | Example (Deepa Iyer) | `https://oncostcatalog.in/refer/ONCOST01` |
 | Quotation share | `https://oncostcatalog.in/q/<share_token>` — token appears in `/admin/quotations` |
 
-Partners can grab their own referral link (+ WhatsApp share) from **Partner Dashboard → Your referral link**.
+Partners can grab their own referral link (+ WhatsApp share) from
+**Partner Dashboard → Your referral link**.
 
 ---
 
-## 4. Post-domain-mapping checklist
+## 4. Password rotation policy (90 days)
+
+- **Admin account (`admin@oncost.shop`)** — rotate the password every **90 days**.
+- **Rotation history**:
+  | Rotation date | Notes |
+  | --- | --- |
+  | 2026-07-10 | Initial rotation. Also stamped on the admin user doc as `password_updated_at`. |
+- **Next rotation due**: **2026-10-08**.
+- The admin user's `password_updated_at` field in the `users` collection is the
+  source of truth. To rotate:
+  1. Choose a new strong password (mixed case, digits, symbol, ≥ 16 chars).
+  2. Update `ADMIN_PASSWORD` in `backend/.env` (preview).
+  3. Update `ADMIN_PASSWORD` in the **Emergent Deployment Secrets Panel** (production) and redeploy.
+  4. Ask the agent to stamp `password_updated_at` on the admin doc and add a row above.
+- **Partners** — no enforced rotation yet. If needed later, we can add a "must change every 90 days" flag on the user doc + a nag on login. Ping the agent when you want this turned on.
+
+---
+
+## 5. Post-domain-mapping checklist
 
 Once `oncostcatalog.in` is mapped at the root:
 
 1. Go to **Emergent Dashboard → Deployment Secrets Panel** and set (or update):
    - `REACT_APP_BACKEND_URL` = `https://oncostcatalog.in`  _(frontend)_
    - `PORTAL_URL` = `https://oncostcatalog.in`  _(backend — used in all outbound emails)_
+   - `ADMIN_PASSWORD` = _the value from your notes for the current rotation window_
 2. **Redeploy** the app so the new envs take effect.
-3. Verify emails:
-   - Request a password reset for `admin@oncost.shop` from `/forgot-password`.
-   - The reset link inside the email should point to `https://oncostcatalog.in/reset-password?token=…`.
-4. (Recommended) Verify your sender domain on Resend so emails go out to **any** recipient — currently only `enterprisepragna@gmail.com` receives them due to Resend testing mode.
+3. Verify emails: request a password reset for `admin@oncost.shop` from `/forgot-password`
+   and check that the reset link inside the email points to `https://oncostcatalog.in/...`.
+4. (Recommended) Verify your sender domain on Resend so emails go out to any recipient —
+   currently only `enterprisepragna@gmail.com` receives them due to Resend testing mode.
 
 ---
 
-## 5. Where the source of truth for env vars lives
+## 6. Env-var source of truth
 
-| Var | Preview `.env` file | Production |
+| Var | Preview (`.env`) | Production |
 | --- | --- | --- |
-| `MONGO_URL` | `backend/.env` (do not edit) | Auto-managed |
-| `DB_NAME` | `backend/.env` (do not edit) | Auto-managed |
+| `MONGO_URL`, `DB_NAME` | `backend/.env` (do not edit) | Auto-managed |
 | `JWT_SECRET` | `backend/.env` | Deployment Secrets Panel |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | `backend/.env` | Deployment Secrets Panel |
 | `RESEND_API_KEY` | `backend/.env` | Deployment Secrets Panel |
 | `SENDER_EMAIL` / `SENDER_NAME` | `backend/.env` | Deployment Secrets Panel |
-| `PORTAL_URL` | `backend/.env` → `https://oncostcatalog.in` | Deployment Secrets Panel — set to `https://oncostcatalog.in` |
-| `REACT_APP_BACKEND_URL` | `frontend/.env` (preview URL — keep as is) | Deployment Secrets Panel — set to `https://oncostcatalog.in` |
+| `PORTAL_URL` | `backend/.env` → `https://oncostcatalog.in` | Deployment Secrets Panel → same |
+| `REACT_APP_BACKEND_URL` | `frontend/.env` (preview URL — keep as-is) | Deployment Secrets Panel → `https://oncostcatalog.in` |
 | `COMPANY_*` (letterhead) | `backend/.env` | Deployment Secrets Panel |
 | `PAYOUT_THRESHOLD` | `backend/.env` (₹1,00,000) | Deployment Secrets Panel |
 
 ---
 
-## 6. Quick sanity checks (curl)
+## 7. Quick sanity checks (curl)
 
 ```bash
-# Should return 200 + admin user object
+# Login — supply the CURRENT admin password from your local notes
 curl -X POST https://oncostcatalog.in/api/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"identifier":"admin@oncost.shop","password":"oncost@2026"}'
+  -d '{"identifier":"admin@oncost.shop","password":"<YOUR_ADMIN_PASSWORD>"}'
 
-# Should return the partner info panel for the referral page
+# Referral info for a partner
 curl https://oncostcatalog.in/api/refer/ONCOST01
 
-# Should return {"ok": true, ...} — issues a password reset email
+# Trigger a password reset email (does not reveal whether the account exists)
 curl -X POST https://oncostcatalog.in/api/auth/forgot-password \
   -H 'Content-Type: application/json' \
   -d '{"identifier":"admin@oncost.shop"}'
