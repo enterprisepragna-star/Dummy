@@ -1801,6 +1801,10 @@ _opms_router = build_opms_router(
 )
 app.include_router(_opms_router, prefix="/api")
 
+# ---------- Resend webhook receiver ----------
+from resend_webhook import build_webhook_router  # noqa: E402
+app.include_router(build_webhook_router(db), prefix="/api")
+
 # ---------- Commission engine ----------
 from commissions import (  # noqa: E402
     build_commissions_router,

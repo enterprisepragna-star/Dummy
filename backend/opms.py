@@ -687,6 +687,83 @@ def build_opms_router(
             "expires_at": _iso(expires),
         }
 
+    @r.post("/admin/reset-link-lookup")
+    async def admin_reset_link_lookup(payload: dict, _user=Depends(_admin_only)):
+        """Admin utility: generate a reset link by pasting the partner's email
+        OR Employee ID. Optionally also emails the link if `send_email=true`."""
+        import os as _os, secrets as _s
+        from emailer import portal_url, is_enabled as email_enabled, send_email as _send, render_password_reset_email
+
+        ident = (payload.get("identifier") or "").strip()
+        also_email = bool(payload.get("send_email"))
+        if not ident:
+            raise HTTPException(400, "identifier is required")
+
+        if ident.upper().startswith("ONCOST-EMP-"):
+            user = await db.users.find_one({"employee_id": ident.upper()})
+        elif "@" in ident:
+            user = await db.users.find_one({"email": ident.lower()})
+        else:
+            # try both partner_code and referral_code lookup
+            p = await db.partners.find_one({
+                "$or": [
+                    {"partner_code": ident.upper()},
+                    {"referral_code": ident.upper()},
+                    {"employee_id": ident.upper()},
+                ],
+            })
+            user = None
+            if p and p.get("email"):
+                user = await db.users.find_one({"email": p["email"]})
+
+        if not user:
+            raise HTTPException(404, "No account found for that email / Employee ID")
+
+        # Invalidate prior unused tokens
+        await db.password_resets.update_many(
+            {"user_id": user["_id"], "used_at": None},
+            {"$set": {"used_at": _now(), "invalidated": True}},
+        )
+        token = _s.token_urlsafe(32)
+        expires = _now() + timedelta(hours=24)
+        await db.password_resets.insert_one({
+            "user_id": user["_id"],
+            "email": user.get("email"),
+            "token": token,
+            "created_at": _now(),
+            "expires_at": expires,
+            "used_at": None,
+            "issued_by_admin": _user.get("email"),
+        })
+        link = portal_url(f"/reset-password?token={token}")
+
+        emailed = False
+        email_error = None
+        if also_email and email_enabled() and user.get("email"):
+            try:
+                name = user.get("name") or user.get("email")
+                result = await _send(
+                    user["email"],
+                    "Reset your ONCOST password",
+                    render_password_reset_email(name=name, reset_link=link, expires_hours=24),
+                )
+                if result and result.get("ok"):
+                    emailed = True
+                else:
+                    email_error = (result or {}).get("reason") or "Unknown Resend error"
+            except Exception as e:
+                email_error = str(e)
+
+        return {
+            "ok": True,
+            "email": user.get("email"),
+            "employee_id": user.get("employee_id"),
+            "reset_link": link,
+            "expires_at": _iso(expires),
+            "emailed": emailed,
+            "email_error": email_error,
+        }
+
     @r.get("/partner/dashboard")
     async def partner_dashboard(request: Request):
         user = await get_current_user(request)
