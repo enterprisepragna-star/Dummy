@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import api, { imageUrl } from "@/lib/api";
 import { toast } from "sonner";
-import { ArrowLeft, CheckCircle2, XCircle, PauseCircle, Download, Copy, User2, IdCard, Phone, Mail, Landmark, HeartPulse, FileText } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, PauseCircle, Download, Copy, User2, IdCard, Phone, Mail, Landmark, HeartPulse, FileText, KeyRound, MessageCircle } from "lucide-react";
 
 const STATUS_META = {
   pending: { label: "Pending", cls: "bg-amber-50 text-amber-700 border-amber-200" },
@@ -19,6 +19,7 @@ export default function PartnerDetailPage() {
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState("");
   const [approveResult, setApproveResult] = useState(null);
+  const [resetLink, setResetLink] = useState(null); // { email, reset_link, expires_at }
 
   const load = async () => {
     try {
@@ -63,6 +64,20 @@ export default function PartnerDetailPage() {
   };
   const copy = (v) => { navigator.clipboard.writeText(v); toast.success("Copied"); };
 
+  const onGenerateResetLink = async () => {
+    if (!window.confirm(`Generate a password reset link for ${p.full_name}? Any previous unused link will be invalidated.`)) return;
+    setBusy(true);
+    try {
+      const { data } = await api.post(`/partners/${id}/reset-link`);
+      setResetLink(data);
+      toast.success("Reset link ready — share it with the partner");
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Could not generate reset link");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="max-w-5xl">
       <Link to="/admin/opms/partners" className="text-xs text-zinc-500 hover:text-zinc-900 inline-flex items-center gap-1"><ArrowLeft size={12} /> All partners</Link>
@@ -97,6 +112,16 @@ export default function PartnerDetailPage() {
               <Download size={14} /> ID Card PDF
             </button>
           )}
+          {p.status === "approved" && (
+            <button
+              onClick={onGenerateResetLink}
+              disabled={busy}
+              data-testid="reset-link-btn"
+              className="border border-[#002FA7] text-[#002FA7] hover:bg-[#002FA7]/5 px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-50"
+            >
+              <KeyRound size={14} /> Generate reset link
+            </button>
+          )}
           {p.status !== "rejected" && p.status !== "pending" && (
             <button onClick={onSuspend} disabled={busy} data-testid="suspend-btn" className="border border-zinc-300 hover:border-zinc-900 px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-50">
               <PauseCircle size={14} /> {p.status === "suspended" ? "Reactivate" : "Suspend"}
@@ -126,6 +151,47 @@ export default function PartnerDetailPage() {
             (Email automation will be wired in the next release — for now, share manually.)
           </p>
           <button onClick={() => setApproveResult(null)} className="mt-3 text-xs text-emerald-800 underline">Dismiss</button>
+        </div>
+      )}
+
+      {/* Reset link banner */}
+      {resetLink && (
+        <div data-testid="reset-link-banner" className="mt-6 border border-[#002FA7]/30 bg-[#002FA7]/[0.03] p-5">
+          <p className="overline text-[10px] text-[#002FA7]">Password reset link ready</p>
+          <p className="text-sm mt-2">
+            Share this link with <b>{resetLink.email}</b>. It expires in 24 hours and can be used
+            only once. Any earlier unused link has been invalidated.
+          </p>
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
+            <code
+              data-testid="reset-link-value"
+              className="font-mono text-[12px] bg-white border border-zinc-200 px-2.5 py-1.5 break-all flex-1 min-w-[280px]"
+            >
+              {resetLink.reset_link}
+            </code>
+            <button
+              data-testid="reset-link-copy"
+              onClick={() => copy(resetLink.reset_link)}
+              className="inline-flex items-center gap-1.5 bg-[#002FA7] hover:bg-[#002277] text-white px-3 py-2 text-xs"
+            >
+              <Copy size={12} /> Copy link
+            </button>
+            <a
+              data-testid="reset-link-whatsapp"
+              target="_blank"
+              rel="noreferrer"
+              href={`https://wa.me/${(p.mobile || "").replace(/\D/g, "")}?text=${encodeURIComponent(
+                `Hi ${p.full_name}, reset your ONCOST partner password here (valid 24 hrs, one-time): ${resetLink.reset_link}`,
+              )}`}
+              className="inline-flex items-center gap-1.5 border border-emerald-300 text-emerald-800 hover:bg-emerald-50 px-3 py-2 text-xs"
+            >
+              <MessageCircle size={12} /> WhatsApp to partner
+            </a>
+          </div>
+          <p className="text-[11px] text-zinc-500 mt-3">
+            Expires: {new Date(resetLink.expires_at).toLocaleString()}
+          </p>
+          <button onClick={() => setResetLink(null)} className="mt-3 text-xs text-zinc-600 underline">Dismiss</button>
         </div>
       )}
 

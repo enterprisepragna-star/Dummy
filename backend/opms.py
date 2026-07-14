@@ -645,6 +645,48 @@ def build_opms_router(
             raise HTTPException(404, "Not found")
         return {"ok": True}
 
+    @r.post("/partners/{pid}/reset-link")
+    async def admin_generate_reset_link(pid: str, _user=Depends(_admin_only)):
+        """Admin action: generate a password reset link for the partner without
+        relying on outbound email. Returns the full URL for the admin to share
+        manually (WhatsApp / SMS / Signal etc)."""
+        import os as _os, secrets as _s
+        from emailer import portal_url
+
+        p = await db.partners.find_one({"_id": ObjectId(pid)})
+        if not p:
+            raise HTTPException(404, "Partner not found")
+        email = p.get("email")
+        if not email:
+            raise HTTPException(400, "Partner has no login email on file")
+        user = await db.users.find_one({"email": email})
+        if not user:
+            raise HTTPException(400, "Partner has not been approved yet — no login account exists")
+
+        # Invalidate any existing unused tokens for this user
+        await db.password_resets.update_many(
+            {"user_id": user["_id"], "used_at": None},
+            {"$set": {"used_at": _now(), "invalidated": True}},
+        )
+        # Match the TTL used by the public forgot-password flow: 24 hours.
+        token = _s.token_urlsafe(32)
+        expires = _now() + timedelta(hours=24)
+        await db.password_resets.insert_one({
+            "user_id": user["_id"],
+            "email": email,
+            "token": token,
+            "created_at": _now(),
+            "expires_at": expires,
+            "used_at": None,
+            "issued_by_admin": _user.get("email"),
+        })
+        return {
+            "ok": True,
+            "email": email,
+            "reset_link": portal_url(f"/reset-password?token={token}"),
+            "expires_at": _iso(expires),
+        }
+
     @r.get("/partner/dashboard")
     async def partner_dashboard(request: Request):
         user = await get_current_user(request)
