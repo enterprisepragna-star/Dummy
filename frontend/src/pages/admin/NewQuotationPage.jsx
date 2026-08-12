@@ -39,10 +39,44 @@ export default function NewQuotationPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api.get("/products").then(({ data }) => setProducts(data));
-    api.get("/discount-config").then(({ data }) => setGlobalDisc(data)).catch(() => {});
-    api.get("/leads-assignees").then(({ data }) => setAssignees(data)).catch(() => {});
-  }, []);
+  api.get("/products").then(({ data }) => {
+    const productList = Array.isArray(data)
+      ? data
+      : Array.isArray(data?.products)
+        ? data.products
+        : Array.isArray(data?.items)
+          ? data.items
+          : Array.isArray(data?.data)
+            ? data.data
+            : [];
+
+    setProducts(productList);
+  }).catch(() => {
+    setProducts([]);
+  });
+
+  api.get("/discount-config")
+    .then(({ data }) => setGlobalDisc(data))
+    .catch(() => {});
+
+  api.get("/leads-assignees")
+    .then(({ data }) => {
+      const assigneeList = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.assignees)
+          ? data.assignees
+          : Array.isArray(data?.items)
+            ? data.items
+            : Array.isArray(data?.data)
+              ? data.data
+              : [];
+
+      setAssignees(assigneeList);
+    })
+    .catch(() => {
+      setAssignees([]);
+    });
+}, []);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
