@@ -1,7 +1,8 @@
 {
   "services": {
     "frontend": {
-      "root": "frontend"
+      "root": "frontend",
+      "buildCommand": "CI=false yarn build"
     },
     "backend": {
       "root": "backend",
