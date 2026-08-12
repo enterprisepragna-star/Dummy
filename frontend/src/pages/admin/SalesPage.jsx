@@ -37,8 +37,7 @@ export default function SalesPage() {
                 <th className="p-3 overline">Accepted</th>
               </tr>
             </thead>
-            <tbody>
-              {sales.map(s => (
+           v
                 <tr key={s.id} data-testid={`sale-row-${s.id}`} className="border-b border-zinc-200 hover:bg-zinc-50 align-top">
                   <td className="p-3 font-mono font-semibold">
                     <Link className="hover:text-[#002FA7]" to={`/admin/quotations/${s.quotation_ref}`}>{s.quotation_id}</Link>
