@@ -37,22 +37,47 @@ export default function SalesPage() {
                 <th className="p-3 overline">Accepted</th>
               </tr>
             </thead>
-           v
-                <tr key={s.id} data-testid={`sale-row-${s.id}`} className="border-b border-zinc-200 hover:bg-zinc-50 align-top">
-                  <td className="p-3 font-mono font-semibold">
-                    <Link className="hover:text-[#002FA7]" to={`/admin/quotations/${s.quotation_ref}`}>{s.quotation_id}</Link>
-                  </td>
-                  <td className="p-3">
-                    <div>{s.customer_name}</div>
-                    <div className="text-xs text-zinc-500">{s.customer_company || ""}</div>
-                  </td>
-                  <td className="p-3 text-xs text-zinc-700 whitespace-pre-line max-w-md">{s.note || "—"}</td>
-                  <td className="p-3 text-right font-mono">{s.approved_budget != null ? formatINR(s.approved_budget) : "—"}</td>
-                  <td className="p-3 text-right font-mono font-semibold">{formatINR(s.total)}</td>
-                  <td className="p-3 text-xs text-zinc-500">{(s.accepted_at || "").slice(0, 10)}</td>
-                </tr>
-              ))}
-            </tbody>
+           <tbody>
+  {(Array.isArray(sales) ? sales : []).map((s) => (
+    <tr
+      key={s.id}
+      data-testid={`sale-row-${s.id}`}
+      className="border-b border-zinc-200 hover:bg-zinc-50 align-top"
+    >
+      <td className="p-3 font-mono font-semibold">
+        <Link
+          className="hover:text-[#002FA7]"
+          to={`/admin/quotations/${s.quotation_ref}`}
+        >
+          {s.quotation_id}
+        </Link>
+      </td>
+
+      <td className="p-3">
+        <div>{s.customer_name}</div>
+        <div className="text-xs text-zinc-500">
+          {s.customer_company || ""}
+        </div>
+      </td>
+
+      <td className="p-3 text-xs text-zinc-700 whitespace-pre-line max-w-md">
+        {s.note || "-"}
+      </td>
+
+      <td className="p-3 text-right font-mono">
+        {s.approved_budget != null ? formatINR(s.approved_budget) : "-"}
+      </td>
+
+      <td className="p-3 text-right font-mono font-semibold">
+        {formatINR(s.total)}
+      </td>
+
+      <td className="p-3 text-xs text-zinc-500">
+        {(s.accepted_at || "").slice(0, 10)}
+      </td>
+    </tr>
+  ))}
+</tbody>
           </table>
         </div>
       )}
