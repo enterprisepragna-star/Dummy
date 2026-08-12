@@ -68,8 +68,9 @@ export default function QuotationsListPage() {
                 <th className="p-3 overline text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
-              {list.map(q => (
+           <tbody>
+  {(Array.isArray(list) ? list : []).map(q => (
+    <tr key={q.id} data-testid={`ADMIN.quoteRow(${q.id})`}>
                 <tr key={q.id} data-testid={ADMIN.quoteRow(q.id)} className="border-b border-zinc-200 hover:bg-zinc-50">
                   <td className="p-3 font-mono font-semibold text-[13px]">
                     <Link to={`/admin/quotations/${q.id}`} className="hover:text-[#002FA7]">{q.quotation_id}</Link>
