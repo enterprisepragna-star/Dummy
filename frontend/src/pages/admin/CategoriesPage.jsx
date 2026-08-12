@@ -14,17 +14,29 @@ export default function CategoriesPage() {
   const [uploadingId, setUploadingId] = useState(null);
   const fileRefs = useRef({});
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const { data } = await api.get("/categories");
-      setItems(data);
-    } catch {
-      toast.error("Failed to load categories");
-    } finally {
-      setLoading(false);
-    }
-  };
+ const load = async () => {
+  setLoading(true);
+
+  try {
+    const { data } = await api.get("/categories");
+
+    const categoryList = Array.isArray(data)
+      ? data
+      : Array.isArray(data?.categories)
+        ? data.categories
+        : Array.isArray(data?.items)
+          ? data.items
+          : Array.isArray(data?.data)
+            ? data.data
+            : [];
+
+    setItems(categoryList);
+  } catch {
+    toast.error("Failed to load categories");
+  } finally {
+    setLoading(false);
+  }
+};
   useEffect(() => { load(); }, []);
 
   const openNew = () => {
