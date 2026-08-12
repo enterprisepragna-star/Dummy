@@ -256,9 +256,9 @@ export default function ProductsPage() {
               className="text-xs px-2 py-1.5 border border-zinc-300 bg-white focus:border-[#002FA7] outline-none"
             >
               <option value="">All categories</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          )}
+              {Array.isArray(categories) && categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
           <SortBtn value="code" label="Code" icon={ArrowUpDown} />
           <SortBtn value="price_asc" label="Price ↑" icon={ArrowUp} />
           <SortBtn value="price_desc" label="Price ↓" icon={ArrowDown} />
