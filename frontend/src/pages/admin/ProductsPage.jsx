@@ -27,20 +27,41 @@ export default function ProductsPage() {
   const fileRefs = useRef({});
 
   const load = async () => {
-    setLoading(true);
-    try {
-      const [{ data: prods }, { data: cats }] = await Promise.all([
-        api.get("/products"),
-        api.get("/categories"),
-      ]);
-      setProducts(prods);
-      setCategories(cats);
-    } catch {
-      toast.error("Failed to load products");
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+
+  try {
+    const [{ data: prods }, { data: cats }] = await Promise.all([
+      api.get("/products"),
+      api.get("/categories"),
+    ]);
+
+    const getArray = (value, keys = []) => {
+      if (Array.isArray(value)) return value;
+
+      for (const key of keys) {
+        if (Array.isArray(value?.[key])) {
+          return value[key];
+        }
+      }
+
+      if (Array.isArray(value?.data)) {
+        return value.data;
+      }
+
+      return [];
+    };
+
+    const productList = getArray(prods, ["products", "items"]);
+    const categoryList = getArray(cats, ["categories", "items"]);
+
+    setProducts(productList);
+    setCategories(categoryList);
+  } catch {
+    toast.error("Failed to load products");
+  } finally {
+    setLoading(false);
+  }
+};
   useEffect(() => { load(); }, []);
 
   const catName = (id) => categories.find(c => c.id === id)?.name || "";
