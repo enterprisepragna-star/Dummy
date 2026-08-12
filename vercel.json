@@ -5,8 +5,7 @@
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "build",
-        "buildCommand": "CI=false yarn build"
+        "distDir": "build"
       }
     },
     {
@@ -18,6 +17,13 @@
     {
       "src": "/api/(.*)",
       "dest": "/backend/server.py"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/$1"
     }
   ]
 }
