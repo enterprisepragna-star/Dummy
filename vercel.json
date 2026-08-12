@@ -6,7 +6,7 @@
       "use": "@vercel/static-build",
       "config": {
         "distDir": "build",
-        "buildCommand": "CI=false yarn build"
+        "buildCommand": "CI=false craco build"
       }
     },
     {
