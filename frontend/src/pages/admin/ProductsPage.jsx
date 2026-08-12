@@ -53,7 +53,7 @@ export default function ProductsPage() {
         p.code.toLowerCase().includes(s) ||
         (p.items || "").toLowerCase().includes(s) ||
         (p.set_type || "").toLowerCase().includes(s)
-      );
+      ); 
     }
     if (categoryFilter) {
       arr = arr.filter(p => (p.category_id || "") === categoryFilter);
