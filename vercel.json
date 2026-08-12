@@ -1,4 +1,4 @@
-{ 
+{
   "version": 2,
   "builds": [
     {
@@ -19,15 +19,8 @@
       "dest": "/backend/server.py"
     },
     {
-      "handle": "filesystem"
-    },
-    {
       "src": "/(.*)",
       "dest": "/index.html"
-    }
-  ]
-}
-      "dest": "/frontend/$1"
     }
   ]
 }
