@@ -1,14 +1,23 @@
 {
-  "version": 3,
-  "services": {
-    "frontend": {
-      "root": "frontend",
-      "buildCommand": "CI=false yarn build"
+  "version": 2,
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build",
+        "buildCommand": "CI=false yarn build"
+      }
     },
-    "backend": {
-      "root": "backend",
-      "entrypoint": "server.py"
+    {
+      "src": "backend/server.py",
+      "use": "@vercel/python"
     }
-  }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/backend/server.py"
+    }
+  ]
 }
-
