@@ -61,7 +61,7 @@ export default function ProductsPage() {
     arr = [...arr];
     if (sort === "price_asc") arr.sort((a, b) => (a.oncost_price || 0) - (b.oncost_price || 0));
     else if (sort === "price_desc") arr.sort((a, b) => (b.oncost_price || 0) - (a.oncost_price || 0));
-    else arr.sort((a, b) => a.code.localeCompare(b.code));
+    else arr.sort((a, b) => (a.code || '').localeCompare(b.code || ''));
     return arr;
   }, [products, q, sort, categoryFilter, categories]);
 
