@@ -12,7 +12,10 @@ export default function PublicCatalogPage() {
   const [zoom, setZoom] = useState(null); // { src, alt, caption } | null
 
   useEffect(() => {
-    api.get("/public/products").then(({ data }) => setProducts(data));
+    api.get("/public/products").then(({ data }) => {
+  console.log("PRODUCT API DATA:", data);
+  setProducts(data);
+});
     // Persist a referral tag if the visitor arrived via /refer or ?ref=
     try {
       const params = new URLSearchParams(window.location.search);
