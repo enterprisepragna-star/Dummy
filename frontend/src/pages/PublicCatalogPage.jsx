@@ -47,10 +47,12 @@ export default function PublicCatalogPage() {
       (a, b) => (b.oncost_price || 0) - (a.oncost_price || 0)
     );
   } else {
-    arr.sort((a, b) =>
-      String(a.code ?? "").localeCompare(String(b.code ?? ""))
-    );
-  }
+  arr.sort((a, b) =>
+    String(a?.code ?? "").localeCompare(
+      String(b?.code ?? "")
+    )
+  );
+}
 
   return arr;
 }, [products, q, sort]);
