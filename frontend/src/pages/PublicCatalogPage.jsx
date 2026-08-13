@@ -21,39 +21,51 @@ export default function PublicCatalogPage() {
     } catch { /* noop */ }
   }, []);
 
-  const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    let arr = products;
-    if (s) {
-      if (s) {
-  arr = arr.filter(
-    p =>
-      String(p.code ?? "").toLowerCase().includes(s) ||
-      String(p.items ?? "").toLowerCase().includes(s)
-  );
-}
+ const filtered = useMemo(() => {
+  const s = q.trim().toLowerCase();
+  let arr = products;
 
-arr = [...arr];
+  if (s) {
+    arr = arr.filter(
+      p =>
+        String(p.code ?? "").toLowerCase().includes(s) ||
+        String(p.items ?? "").toLowerCase().includes(s)
+    );
+  }
 
-if (sort === "price_asc") {
-  arr.sort(
-    (a, b) => (a.oncost_price || 0) - (b.oncost_price || 0)
-  );
-} else if (sort === "price_desc") {
-  arr.sort(
-    (a, b) => (b.oncost_price || 0) - (a.oncost_price || 0)
-  );
-} else {
-  arr.sort((a, b) =>
-    String(a.code ?? "").localeCompare(String(b.code ?? ""))
-  );
-}
-    >
-      <Icon size={11} />
-      {label}
-    </button>
-  );
+  arr = [...arr];
 
+  if (sort === "price_asc") {
+    arr.sort(
+      (a, b) => (a.oncost_price || 0) - (b.oncost_price || 0)
+    );
+  } else if (sort === "price_desc") {
+    arr.sort(
+      (a, b) => (b.oncost_price || 0) - (a.oncost_price || 0)
+    );
+  } else {
+    arr.sort((a, b) =>
+      String(a.code ?? "").localeCompare(String(b.code ?? ""))
+    );
+  }
+
+  return arr;
+}, [products, q, sort]);
+
+const SortBtn = ({ value, label, icon: Icon }) => (
+  <button
+    onClick={() => setSort(value)}
+    data-testid={`cat-sort-${value}`}
+    className={`text-xs px-3 py-1.5 border transition-all flex items-center gap-1.5 ${
+      sort === value
+        ? "border-[#002FA7] text-[#002FA7] bg-[#002FA7]/5"
+        : "border-zinc-300 text-zinc-600 hover:border-zinc-900"
+    }`}
+  >
+    <Icon size={11} />
+    {label}
+  </button>
+);
   return (
     <div data-testid={PUBLIC.catalogContainer} className="min-h-screen bg-white">
       <div className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-zinc-200">
