@@ -19,6 +19,11 @@ export default api;
 export const imageUrl = (filename) => {
   if (!filename) return null;
   if (filename.startsWith("http://") || filename.startsWith("https://")) return filename;
+  if (filename.startsWith("/")) return filename;
+  // If static bundled image (SG_*.jpg), fallback to static /product_images/ directory directly
+  if (filename.startsWith("SG_")) {
+    return `/product_images/${filename}`;
+  }
   return `${API}/images/${filename}`;
 };
 
