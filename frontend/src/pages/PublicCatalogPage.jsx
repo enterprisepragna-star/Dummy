@@ -11,11 +11,18 @@ export default function PublicCatalogPage() {
   const [sort, setSort] = useState("code");
   const [zoom, setZoom] = useState(null); // { src, alt, caption } | null
 
+  const [error, setError] = useState(null);
+
   useEffect(() => {
-    api.get("/public/products").then(({ data }) => {
-  console.log("PRODUCT API DATA:", data);
-  setProducts(data);
-});
+    api.get("/public/products")
+      .then(({ data }) => {
+        setProducts(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => {
+        console.error("Failed to load public catalog products:", err);
+        setError("Failed to load catalog products. Please refresh or try again later.");
+      });
+
     // Persist a referral tag if the visitor arrived via /refer or ?ref=
     try {
       const params = new URLSearchParams(window.location.search);
@@ -109,6 +116,11 @@ const SortBtn = ({ value, label, icon: Icon }) => (
       </div>
 
       <section className="max-w-6xl mx-auto px-6 py-10 pb-24">
+        {error && (
+          <div className="mb-8 p-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded">
+            {error}
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
           {filtered.map(p => (
             <article key={p.id} className="group">

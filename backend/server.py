@@ -566,7 +566,7 @@ async def _resolve_discount(q_type: Optional[str], q_value: Optional[float], q_l
 
 # ---------- Products ----------
 async def _list_products(visible_only: bool = False) -> list:
-    q = {"visible": True} if visible_only else {}
+    q = {"visible": {"$ne": False}} if visible_only else {}
     cur = db.products.find(q).sort("code", 1)
     items = await cur.to_list(length=1000)
     rule = await db.pricing_rule.find_one({"_id": "default"}) or {
