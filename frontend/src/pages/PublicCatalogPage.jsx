@@ -16,7 +16,17 @@ export default function PublicCatalogPage() {
   useEffect(() => {
     api.get("/public/products")
       .then(({ data }) => {
-        setProducts(Array.isArray(data) ? data : []);
+        let prods = [];
+        if (Array.isArray(data)) {
+          prods = data;
+        } else if (data && Array.isArray(data.products)) {
+          prods = data.products;
+        } else if (data && Array.isArray(data.items)) {
+          prods = data.items;
+        } else if (data && Array.isArray(data.data)) {
+          prods = data.data;
+        }
+        setProducts(prods);
       })
       .catch((err) => {
         console.error("Failed to load public catalog products:", err);
