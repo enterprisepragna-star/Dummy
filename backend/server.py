@@ -568,32 +568,7 @@ async def _resolve_discount(q_type: Optional[str], q_value: Optional[float], q_l
 async def _list_products(visible_only: bool = False) -> list:
     q = {"visible": {"$ne": False}} if visible_only else {}
     cur = db.products.find(q).sort("code", 1)
-    items = []
-    try:
-        items = await cur.to_list(length=1000)
-    except Exception as e:
-        logger.error(f"MongoDB product query failed: {e}")
-
-    # Fallback: if database returns 0 products (e.g. fresh DB connection), load products from local products.json
-    if not items and PRODUCTS_JSON.exists():
-        try:
-            raw_items = json.loads(PRODUCTS_JSON.read_text())
-            for idx, it in enumerate(raw_items):
-                if visible_only and it.get("visible") is False:
-                    continue
-                items.append({
-                    "id": str(it.get("_id", f"static-{idx}")),
-                    "code": it.get("code", ""),
-                    "set_type": it.get("set_type", ""),
-                    "items": it.get("items", ""),
-                    "sg_price": int(it.get("sg_price", 0)),
-                    "moq": int(it.get("moq", 50)),
-                    "image": it.get("image"),
-                    "override_price": it.get("override_price"),
-                    "visible": it.get("visible", True),
-                })
-        except Exception as err:
-            logger.error(f"Fallback products.json read failed: {err}")
+    items = await cur.to_list(length=1000)
 
     rule = await db.pricing_rule.find_one({"_id": "default"}) or {
         "threshold": 1000, "below_increment": 50, "at_or_above_increment": 100,
