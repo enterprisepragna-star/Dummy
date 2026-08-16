@@ -28,9 +28,31 @@ export default function PublicCatalogPage() {
         }
         setProducts(prods);
       })
-      .catch((err) => {
-        console.error("Failed to load public catalog products:", err);
-        setError("Failed to load catalog products. Please refresh or try again later.");
+      .catch(() => {
+        // Direct fallback: load bundled products directly if serverless API is unavailable
+        fetch("/products.json")
+          .then((res) => res.json())
+          .then((data) => {
+            if (Array.isArray(data)) {
+              setProducts(
+                data.map((it, idx) => ({
+                  id: `static-${idx}`,
+                  code: it.code,
+                  set_type: it.set_type,
+                  items: it.items,
+                  moq: it.moq || 50,
+                  oncost_price: it.sg_price ? it.sg_price + 100 : 0,
+                  image: it.image,
+                }))
+              );
+              setError(null);
+            } else {
+              setError("Failed to load catalog products. Please refresh or try again later.");
+            }
+          })
+          .catch(() => {
+            setError("Failed to load catalog products. Please refresh or try again later.");
+          });
       });
 
     // Persist a referral tag if the visitor arrived via /refer or ?ref=

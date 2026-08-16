@@ -1,0 +1,830 @@
+[
+  {
+    "code": "SG 547",
+    "page": 2,
+    "set_type": "3in1",
+    "items": "Temperature Flask, Metal pen, Note Book",
+    "sg_price": 390,
+    "moq": 50,
+    "image": "SG_547.jpg"
+  },
+  {
+    "code": "SG 548",
+    "page": 3,
+    "set_type": "4in1",
+    "items": "Temperature Flask, Metal pen, Note Book, Key Chain",
+    "sg_price": 435,
+    "moq": 50,
+    "image": "SG_548.jpg"
+  },
+  {
+    "code": "SG 550",
+    "page": 4,
+    "set_type": "5in1",
+    "items": "Temperature Flask, Metal pen, Note Book, Key Chain, Insulated Mug",
+    "sg_price": 800,
+    "moq": 50,
+    "image": "SG_550.jpg"
+  },
+  {
+    "code": "SG 576",
+    "page": 5,
+    "set_type": "2in1",
+    "items": "Note Book , Pen",
+    "sg_price": 250,
+    "moq": 100,
+    "image": "SG_576.jpg"
+  },
+  {
+    "code": "SG 573",
+    "page": 5,
+    "set_type": "2in1",
+    "items": "Note Book , Pen",
+    "sg_price": 250,
+    "moq": 100,
+    "image": "SG_573.jpg"
+  },
+  {
+    "code": "SG 575",
+    "page": 5,
+    "set_type": "2in1",
+    "items": "Note Book , Pen",
+    "sg_price": 345,
+    "moq": 100,
+    "image": "SG_575.jpg"
+  },
+  {
+    "code": "SG 572",
+    "page": 5,
+    "set_type": "2in1",
+    "items": "Note Book , Pen",
+    "sg_price": 335,
+    "moq": 100,
+    "image": "SG_572.jpg"
+  },
+  {
+    "code": "SG 574",
+    "page": 5,
+    "set_type": "2in1",
+    "items": "Note Book , Pen",
+    "sg_price": 345,
+    "moq": 100,
+    "image": "SG_574.jpg"
+  },
+  {
+    "code": "SG 577",
+    "page": 6,
+    "set_type": "3in1",
+    "items": "Note Book , Pen & Key Chain",
+    "sg_price": 350,
+    "moq": 100,
+    "image": "SG_577.jpg"
+  },
+  {
+    "code": "SG 583",
+    "page": 6,
+    "set_type": "3in1",
+    "items": "Note Book , Pen & Key Chain",
+    "sg_price": 350,
+    "moq": 100,
+    "image": "SG_583.jpg"
+  },
+  {
+    "code": "SG 578",
+    "page": 6,
+    "set_type": "3in1",
+    "items": "Note Book , Pen & Key Chain",
+    "sg_price": 350,
+    "moq": 100,
+    "image": "SG_578.jpg"
+  },
+  {
+    "code": "SG 582",
+    "page": 6,
+    "set_type": "3in1",
+    "items": "Note Book , Pen & Key Chain",
+    "sg_price": 350,
+    "moq": 100,
+    "image": "SG_582.jpg"
+  },
+  {
+    "code": "SG 581",
+    "page": 6,
+    "set_type": "3in1",
+    "items": "Note Book , Pen & Key Chain",
+    "sg_price": 350,
+    "moq": 100,
+    "image": "SG_581.jpg"
+  },
+  {
+    "code": "SG 580",
+    "page": 6,
+    "set_type": "3in1",
+    "items": "Note Book , Pen & Key Chain",
+    "sg_price": 350,
+    "moq": 100,
+    "image": "SG_580.jpg"
+  },
+  {
+    "code": "SG 579",
+    "page": 6,
+    "set_type": "3in1",
+    "items": "Note Book , Pen & Key Chain",
+    "sg_price": 350,
+    "moq": 100,
+    "image": "SG_579.jpg"
+  },
+  {
+    "code": "SG 590",
+    "page": 7,
+    "set_type": "4in1",
+    "items": "Note Book , Pen, Card Holder & Key Chain",
+    "sg_price": 460,
+    "moq": 100,
+    "image": "SG_590.jpg"
+  },
+  {
+    "code": "SG 597",
+    "page": 7,
+    "set_type": "4in1",
+    "items": "Note Book , Pen, Card Holder & Key Chain",
+    "sg_price": 450,
+    "moq": 100,
+    "image": "SG_597.jpg"
+  },
+  {
+    "code": "SG 593",
+    "page": 7,
+    "set_type": "4in1",
+    "items": "Note Book , Pen, Card Holder & Key Chain",
+    "sg_price": 450,
+    "moq": 100,
+    "image": "SG_593.jpg"
+  },
+  {
+    "code": "SG 592",
+    "page": 7,
+    "set_type": "4in1",
+    "items": "Note Book , Pen, Card Holder & Key Chain",
+    "sg_price": 490,
+    "moq": 100,
+    "image": "SG_592.jpg"
+  },
+  {
+    "code": "SG 591",
+    "page": 7,
+    "set_type": "4in1",
+    "items": "Note Book , Pen, Card Holder & Key Chain",
+    "sg_price": 450,
+    "moq": 100,
+    "image": "SG_591.jpg"
+  },
+  {
+    "code": "SG 596",
+    "page": 7,
+    "set_type": "4in1",
+    "items": "Note Book , Pen, Card Holder & Key Chain",
+    "sg_price": 450,
+    "moq": 100,
+    "image": "SG_596.jpg"
+  },
+  {
+    "code": "SG 595",
+    "page": 7,
+    "set_type": "4in1",
+    "items": "Note Book , Pen, Card Holder & Key Chain",
+    "sg_price": 400,
+    "moq": 100,
+    "image": "SG_595.jpg"
+  },
+  {
+    "code": "SG 594",
+    "page": 7,
+    "set_type": "4in1",
+    "items": "Note Book , Pen, Card Holder & Key Chain",
+    "sg_price": 450,
+    "moq": 100,
+    "image": "SG_594.jpg"
+  },
+  {
+    "code": "SG 598",
+    "page": 8,
+    "set_type": "4in1",
+    "items": "Note Book , Pen, Card Holder & Key Chain",
+    "sg_price": 480,
+    "moq": 100,
+    "image": "SG_598.jpg"
+  },
+  {
+    "code": "SG 603",
+    "page": 8,
+    "set_type": "4in1",
+    "items": "Note Book , Pen, Card Holder & Key Chain",
+    "sg_price": 450,
+    "moq": 100,
+    "image": "SG_603.jpg"
+  },
+  {
+    "code": "SG 601",
+    "page": 8,
+    "set_type": "4in1",
+    "items": "Note Book , Pen, Card Holder & Key Chain",
+    "sg_price": 450,
+    "moq": 100,
+    "image": "SG_601.jpg"
+  },
+  {
+    "code": "SG 600",
+    "page": 8,
+    "set_type": "4in1",
+    "items": "Note Book , Pen, Card Holder & Key Chain",
+    "sg_price": 450,
+    "moq": 100,
+    "image": "SG_600.jpg"
+  },
+  {
+    "code": "SG 599",
+    "page": 8,
+    "set_type": "4in1",
+    "items": "Note Book , Pen, Card Holder & Key Chain",
+    "sg_price": 450,
+    "moq": 100,
+    "image": "SG_599.jpg"
+  },
+  {
+    "code": "SG 602",
+    "page": 8,
+    "set_type": "4in1",
+    "items": "Note Book , Pen, Card Holder & Key Chain",
+    "sg_price": 450,
+    "moq": 100,
+    "image": "SG_602.jpg"
+  },
+  {
+    "code": "SG 567",
+    "page": 9,
+    "set_type": "4in1",
+    "items": "Insulated Flask 500ml, 2 steel Mug, Auto Open Auto Close, Umbrella",
+    "sg_price": 950,
+    "moq": 50,
+    "image": "SG_567.jpg"
+  },
+  {
+    "code": "SG 565",
+    "page": 9,
+    "set_type": "3in1",
+    "items": "Insulated Temp Mug, Note Book, Metal Pen",
+    "sg_price": 700,
+    "moq": 50,
+    "image": "SG_565.jpg"
+  },
+  {
+    "code": "SG 564",
+    "page": 9,
+    "set_type": "3in1",
+    "items": "Insulated Mug, Note Book, Metal Pen",
+    "sg_price": 900,
+    "moq": 50,
+    "image": "SG_564.jpg"
+  },
+  {
+    "code": "SG 563",
+    "page": 9,
+    "set_type": "3in1",
+    "items": "Insulated Flask, Note Book, Metal Pen",
+    "sg_price": 775,
+    "moq": 50,
+    "image": "SG_563.jpg"
+  },
+  {
+    "code": "SG 557",
+    "page": 10,
+    "set_type": "3in1",
+    "items": "Temperature Bottle, Note Book, Metal Pen",
+    "sg_price": 600,
+    "moq": 50,
+    "image": "SG_557.jpg"
+  },
+  {
+    "code": "SG 559",
+    "page": 10,
+    "set_type": "3in1",
+    "items": "Insulated Mug, Note Book, Metal Pen",
+    "sg_price": 550,
+    "moq": 50,
+    "image": "SG_559.jpg"
+  },
+  {
+    "code": "SG 558",
+    "page": 10,
+    "set_type": "",
+    "items": "Insulated Mug, Note Book, Metal Pen",
+    "sg_price": 550,
+    "moq": 50,
+    "image": "SG_558.jpg"
+  },
+  {
+    "code": "SG 556",
+    "page": 10,
+    "set_type": "3in1",
+    "items": "Insulated Mug, Note Book, Metal Pen",
+    "sg_price": 750,
+    "moq": 50,
+    "image": "SG_556.jpg"
+  },
+  {
+    "code": "SG 562",
+    "page": 11,
+    "set_type": "3in1",
+    "items": "Note Book, Wallet, Pen",
+    "sg_price": 400,
+    "moq": 50,
+    "image": "SG_562.jpg"
+  },
+  {
+    "code": "SG 561",
+    "page": 11,
+    "set_type": "4in1",
+    "items": "Note Book, Key Chain, Card Holder, Pen",
+    "sg_price": 900,
+    "moq": 50,
+    "image": "SG_561.jpg"
+  },
+  {
+    "code": "SG 568",
+    "page": 12,
+    "set_type": "2in1",
+    "items": "Note Book , Pen",
+    "sg_price": 270,
+    "moq": 100,
+    "image": "SG_568.jpg"
+  },
+  {
+    "code": "SG 570",
+    "page": 12,
+    "set_type": "2in1",
+    "items": "Mobile Holder Note Book , Pen",
+    "sg_price": 395,
+    "moq": 100,
+    "image": "SG_570.jpg"
+  },
+  {
+    "code": "SG 569",
+    "page": 12,
+    "set_type": "2in1",
+    "items": "Note Book , Pen",
+    "sg_price": 315,
+    "moq": 100,
+    "image": "SG_569.jpg"
+  },
+  {
+    "code": "SG 571",
+    "page": 12,
+    "set_type": "2in1",
+    "items": "Note Book , Pen",
+    "sg_price": 265,
+    "moq": 100,
+    "image": "SG_571.jpg"
+  },
+  {
+    "code": "SG 551",
+    "page": 13,
+    "set_type": "6in1",
+    "items": "SS Bottle, Mobile Stand, Note Book, Key Chain, SS Mug, Pen",
+    "sg_price": 1275,
+    "moq": 50,
+    "image": "SG_551.jpg"
+  },
+  {
+    "code": "SG 549",
+    "page": 14,
+    "set_type": "5in1",
+    "items": "Temperature Flask, Metal pen, Note Book, Key Chain, Mug",
+    "sg_price": 750,
+    "moq": 50,
+    "image": "SG_549.jpg"
+  },
+  {
+    "code": "SG 552",
+    "page": 15,
+    "set_type": "3in1",
+    "items": "Temperature Bottle, 2 Tea Mug",
+    "sg_price": 350,
+    "moq": 100,
+    "image": "SG_552.jpg"
+  },
+  {
+    "code": "SG 554",
+    "page": 15,
+    "set_type": "3in1",
+    "items": "Insulated Flask, 2 Insulated Mug",
+    "sg_price": 950,
+    "moq": 50,
+    "image": "SG_554.jpg"
+  },
+  {
+    "code": "SG 555",
+    "page": 15,
+    "set_type": "3in1",
+    "items": "Insulated Bottle, 2 Steel Mug",
+    "sg_price": 850,
+    "moq": 50,
+    "image": "SG_555.jpg"
+  },
+  {
+    "code": "SG 553",
+    "page": 15,
+    "set_type": "4in1",
+    "items": "750 ml Flask, Beer Mug, Key Chain, Pen",
+    "sg_price": 950,
+    "moq": 50,
+    "image": "SG_553.jpg"
+  },
+  {
+    "code": "SG 521",
+    "page": 16,
+    "set_type": "3in1",
+    "items": "Note Book &Pen",
+    "sg_price": 325,
+    "moq": 50,
+    "image": "SG_521.jpg"
+  },
+  {
+    "code": "SG 527",
+    "page": 16,
+    "set_type": "3in1",
+    "items": "Note Book &Pen",
+    "sg_price": 350,
+    "moq": 50,
+    "image": "SG_527.jpg"
+  },
+  {
+    "code": "SG 526",
+    "page": 16,
+    "set_type": "3in1",
+    "items": "Note Book &Pen",
+    "sg_price": 350,
+    "moq": 50,
+    "image": "SG_526.jpg"
+  },
+  {
+    "code": "SG 525",
+    "page": 16,
+    "set_type": "3in1",
+    "items": "Note Book &Pen",
+    "sg_price": 350,
+    "moq": 50,
+    "image": "SG_525.jpg"
+  },
+  {
+    "code": "SG 524",
+    "page": 16,
+    "set_type": "3in1",
+    "items": "Note Book &Pen",
+    "sg_price": 350,
+    "moq": 50,
+    "image": "SG_524.jpg"
+  },
+  {
+    "code": "SG 523",
+    "page": 16,
+    "set_type": "3in1",
+    "items": "Note Book &Pen",
+    "sg_price": 280,
+    "moq": 50,
+    "image": "SG_523.jpg"
+  },
+  {
+    "code": "SG 522",
+    "page": 16,
+    "set_type": "3in1",
+    "items": "Note Book &Pen",
+    "sg_price": 250,
+    "moq": 50,
+    "image": "SG_522.jpg"
+  },
+  {
+    "code": "SG 536",
+    "page": 18,
+    "set_type": "6in1",
+    "items": "Note Book, Key, Chain,Pen, Power Bank 10,000, MAH,Wireless, Mouse",
+    "sg_price": 1490,
+    "moq": 50,
+    "image": "SG_536.jpg"
+  },
+  {
+    "code": "SG 537",
+    "page": 18,
+    "set_type": "6in1",
+    "items": "Note Book, Key Chain, 3 in 1 Data Cable, Power Bank 10,000 MAH, Wireless Charger, Gadget Pouch",
+    "sg_price": 2350,
+    "moq": 50,
+    "image": "SG_537.jpg"
+  },
+  {
+    "code": "SG 543",
+    "page": 19,
+    "set_type": "4in1",
+    "items": "Power Bank Note Book 8000 MAH, Pen Drive,Flask, Metal pen",
+    "sg_price": 2650,
+    "moq": 25,
+    "image": "SG_543.jpg"
+  },
+  {
+    "code": "SG 542",
+    "page": 19,
+    "set_type": "7in1",
+    "items": "Note Book, Power Bank 10,000 MAH, Wireless Mouse ,Key Chain, Card Holder,Pen, Drive ,Pen",
+    "sg_price": 3500,
+    "moq": 25,
+    "image": "SG_542.jpg"
+  },
+  {
+    "code": "SG 538",
+    "page": 20,
+    "set_type": "7in1",
+    "items": "Note Book, 3 in 1 Data Cable, Power Bank 5,000 MAH, Ss Mug,Insulated, Flask, Pen Drive ,Pen",
+    "sg_price": 1750,
+    "moq": 50,
+    "image": "SG_538.jpg"
+  },
+  {
+    "code": "SG 541",
+    "page": 20,
+    "set_type": "7in1",
+    "items": "Note Book, Power Bank 10,000 MAH, Wireless Mouse ,Key Chain, Card Holder,32 Pen Drive ,Pen",
+    "sg_price": 1650,
+    "moq": 50,
+    "image": "SG_541.jpg"
+  },
+  {
+    "code": "SG 540",
+    "page": 20,
+    "set_type": "7in1",
+    "items": "Note Book, 3 in 1 Data Cable, Power Bank 5,000 MAH, Ss Mug,Insulated, Flask, Pen Drive ,Pen",
+    "sg_price": 1450,
+    "moq": 50,
+    "image": "SG_540.jpg"
+  },
+  {
+    "code": "SG 539",
+    "page": 20,
+    "set_type": "4in1",
+    "items": "Mobile Stand ,Power Bank 10,000 Mah, Wireless Mouse , Pen Drive",
+    "sg_price": 1290,
+    "moq": 50,
+    "image": "SG_539.jpg"
+  },
+  {
+    "code": "SG 501",
+    "page": 22,
+    "set_type": "6in1",
+    "items": "Note Book,Mug,Pen,Flask, Card Holder, Key Chain",
+    "sg_price": 1150,
+    "moq": 50,
+    "image": "SG_501.jpg"
+  },
+  {
+    "code": "SG 502",
+    "page": 22,
+    "set_type": "6in1",
+    "items": "Note Book,Mug,Pen,Flask, Speaker, Key Chain",
+    "sg_price": 1300,
+    "moq": 50,
+    "image": "SG_502.jpg"
+  },
+  {
+    "code": "SG 503",
+    "page": 23,
+    "set_type": "6in1",
+    "items": "Note Book,Desktop Matt, Pen, Pen Holder, Calendar,Key, Chain",
+    "sg_price": 1300,
+    "moq": 50,
+    "image": "SG_503.jpg"
+  },
+  {
+    "code": "SG 504",
+    "page": 23,
+    "set_type": "4in1",
+    "items": "Note Book,Mug,Plant Tube, Desk Organiser, Glass Mug",
+    "sg_price": 1250,
+    "moq": 50,
+    "image": "SG_504.jpg"
+  },
+  {
+    "code": "SG 534",
+    "page": 24,
+    "set_type": "4in1",
+    "items": "Note Book, Key, Chain,Card, Holder &Pen",
+    "sg_price": 450,
+    "moq": 50,
+    "image": "SG_534.jpg"
+  },
+  {
+    "code": "SG 535",
+    "page": 24,
+    "set_type": "4in1",
+    "items": "Note Book, Key, Chain,Card, Holder &Pen",
+    "sg_price": 450,
+    "moq": 50,
+    "image": "SG_535.jpg"
+  },
+  {
+    "code": "SG 533",
+    "page": 24,
+    "set_type": "4in1",
+    "items": "Note Book, Key, Chain,Card, Holder &Pen",
+    "sg_price": 450,
+    "moq": 50,
+    "image": "SG_533.jpg"
+  },
+  {
+    "code": "SG 532",
+    "page": 24,
+    "set_type": "4in1",
+    "items": "Note Book, Key, Chain,Card, Holder &Pen",
+    "sg_price": 430,
+    "moq": 50,
+    "image": "SG_532.jpg"
+  },
+  {
+    "code": "SG 528",
+    "page": 25,
+    "set_type": "3in1",
+    "items": "Note Book,Key, Chain &Pen",
+    "sg_price": 425,
+    "moq": 100,
+    "image": "SG_528.jpg"
+  },
+  {
+    "code": "SG 529",
+    "page": 25,
+    "set_type": "4in1",
+    "items": "Note Book,Key, Chain, Card Holder &Pen",
+    "sg_price": 495,
+    "moq": 100,
+    "image": "SG_529.jpg"
+  },
+  {
+    "code": "SG 530",
+    "page": 25,
+    "set_type": "4in1",
+    "items": "Note Book, Key Chain, Card Holder &Pen",
+    "sg_price": 550,
+    "moq": 100,
+    "image": "SG_530.jpg"
+  },
+  {
+    "code": "SG 531",
+    "page": 25,
+    "set_type": "4in1",
+    "items": "Note Book, Key Chain, Card Holder &Pen",
+    "sg_price": 505,
+    "moq": 100,
+    "image": "SG_531.jpg"
+  },
+  {
+    "code": "SG 505",
+    "page": 26,
+    "set_type": "6in1",
+    "items": "Note Book,Mug,Pen,Flask, Desk Cube , Key Chain",
+    "sg_price": 1500,
+    "moq": 50,
+    "image": "SG_505.jpg"
+  },
+  {
+    "code": "SG 506",
+    "page": 26,
+    "set_type": "7in1",
+    "items": "Note Book,Mug,Pen,Flask, Calendar, Key Chain,Pen, Holder",
+    "sg_price": 1650,
+    "moq": 50,
+    "image": "SG_506.jpg"
+  },
+  {
+    "code": "SG 507",
+    "page": 27,
+    "set_type": "4in1",
+    "items": "Note Book,Tumbler, Card Holder, Clock",
+    "sg_price": 1450,
+    "moq": 50,
+    "image": "SG_507.jpg"
+  },
+  {
+    "code": "SG 510",
+    "page": 27,
+    "set_type": "6in1",
+    "items": "Note Book,Mug,Pen,Bottle, Card Holder, Key Chain",
+    "sg_price": 1125,
+    "moq": 50,
+    "image": "SG_510.jpg"
+  },
+  {
+    "code": "SG 509",
+    "page": 27,
+    "set_type": "6in1",
+    "items": "Note Book,Mug,Pen,Flask, Card Holder, Key Chain",
+    "sg_price": 1250,
+    "moq": 50,
+    "image": "SG_509.jpg"
+  },
+  {
+    "code": "SG 508",
+    "page": 27,
+    "set_type": "5in1",
+    "items": "Note Book,Mug,Pen,Bottle, Pen ,Power Bank(10,000 MAH)",
+    "sg_price": 1625,
+    "moq": 50,
+    "image": "SG_508.jpg"
+  },
+  {
+    "code": "SG 511",
+    "page": 28,
+    "set_type": "3in1",
+    "items": "Note Book,Pen,Flask",
+    "sg_price": 550,
+    "moq": 50,
+    "image": "SG_511.jpg"
+  },
+  {
+    "code": "SG 512",
+    "page": 28,
+    "set_type": "4in1",
+    "items": "Power Bank, Digital Clock, Wireless Mouse, Pen Drive",
+    "sg_price": 1875,
+    "moq": 50,
+    "image": "SG_512.jpg"
+  },
+  {
+    "code": "SG 513",
+    "page": 28,
+    "set_type": "3in1",
+    "items": "Note Book,Mug,Pen",
+    "sg_price": 650,
+    "moq": 50,
+    "image": "SG_513.jpg"
+  },
+  {
+    "code": "SG 514",
+    "page": 29,
+    "set_type": "5in1",
+    "items": "Note Book,Mug,Pen,Flask, Card Holder, Key Chain",
+    "sg_price": 1150,
+    "moq": 50,
+    "image": "SG_514.jpg"
+  },
+  {
+    "code": "SG 517",
+    "page": 29,
+    "set_type": "3in1",
+    "items": "Note Book,Tumbler,Pen",
+    "sg_price": 575,
+    "moq": 50,
+    "image": "SG_517.jpg"
+  },
+  {
+    "code": "SG 518",
+    "page": 29,
+    "set_type": "4in1",
+    "items": "Note Book,Pen,Flask, Key Chain",
+    "sg_price": 600,
+    "moq": 50,
+    "image": "SG_518.jpg"
+  },
+  {
+    "code": "SG 516",
+    "page": 29,
+    "set_type": "3in1",
+    "items": "Note Book,Pen,Bottle",
+    "sg_price": 475,
+    "moq": 50,
+    "image": "SG_516.jpg"
+  },
+  {
+    "code": "SG 515",
+    "page": 29,
+    "set_type": "3in1",
+    "items": "Note Book,Pen,Flask",
+    "sg_price": 645,
+    "moq": 50,
+    "image": "SG_515.jpg"
+  },
+  {
+    "code": "SG 519",
+    "page": 30,
+    "set_type": "6in1",
+    "items": "Note Book,Pen,Flask, Pen Drive,Power, Bank 10000MAH, Key Chain",
+    "sg_price": 2650,
+    "moq": 50,
+    "image": "SG_519.jpg"
+  },
+  {
+    "code": "SG 520",
+    "page": 30,
+    "set_type": "3in1",
+    "items": "Note Book,Bottle,Pen",
+    "sg_price": 1200,
+    "moq": 50,
+    "image": "SG_520.jpg"
+  }
+]
