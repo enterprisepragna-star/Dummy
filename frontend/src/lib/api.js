@@ -16,7 +16,11 @@ api.interceptors.request.use((cfg) => {
 
 export default api;
 
-export const imageUrl = (filename) => (filename ? `${API}/images/${filename}` : null);
+export const imageUrl = (filename) => {
+  if (!filename) return null;
+  if (filename.startsWith("http://") || filename.startsWith("https://")) return filename;
+  return `${API}/images/${filename}`;
+};
 
 export const formatINR = (n) => {
   if (n === null || n === undefined || isNaN(n)) return "—";

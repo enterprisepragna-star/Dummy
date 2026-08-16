@@ -1702,6 +1702,9 @@ async def get_image(filename: str):
     # 2) Fallback to local disk (bundled supplier images)
     fp = IMAGES_DIR / filename
     if not fp.exists():
+        # Fallback to frontend static assets directory if available
+        fp = ROOT_DIR.parent / "frontend" / "public" / "product_images" / filename
+    if not fp.exists():
         raise HTTPException(404, "not found")
     return FileResponse(str(fp), media_type="image/jpeg",
                         headers={"Cache-Control": "public, max-age=86400"})
