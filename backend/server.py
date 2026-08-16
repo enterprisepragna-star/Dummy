@@ -50,12 +50,12 @@ except Exception:
     pass
 
 # ---------- Config ----------
-MONGO_URL = os.environ["MONGO_URL"]
-DB_NAME = os.environ["DB_NAME"]
-JWT_SECRET = os.environ["JWT_SECRET"]
+MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
+DB_NAME = os.environ.get("DB_NAME", "oncost_db")
+JWT_SECRET = os.environ.get("JWT_SECRET", "oncost-secret-key-change-in-prod")
 JWT_ALGO = "HS256"
-ADMIN_EMAIL = os.environ["ADMIN_EMAIL"].lower()
-ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@oncost.shop").lower()
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
 
 # Company letterhead (configurable via env, with sensible defaults for ONCOST)
 COMPANY_LEGAL_NAME = os.environ.get("COMPANY_LEGAL_NAME", "PRAGNA ENTERPRISES")

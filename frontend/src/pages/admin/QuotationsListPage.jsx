@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import api, { formatINR, shareLink } from "@/lib/api";
+import api, { API, formatINR, shareLink } from "@/lib/api";
 import { Link } from "react-router-dom";
 import { ADMIN } from "@/constants/testIds";
 import { toast } from "sonner";
@@ -87,7 +87,7 @@ export default function QuotationsListPage() {
                     <div className="flex items-center gap-1 justify-end">
                       <a href={`/q/${q.share_token}`} target="_blank" rel="noreferrer" className="p-1 hover:bg-zinc-100" title="Open public link"><ExternalLink size={14} /></a>
                       <button data-testid={ADMIN.quoteCopyLink(q.id)} onClick={() => copyLink(q.share_token)} className="p-1 hover:bg-zinc-100" title="Copy share link"><Copy size={14} /></button>
-                      <a data-testid={ADMIN.quoteDownloadPdf(q.id)} href={`${process.env.REACT_APP_BACKEND_URL}/api/share/${q.share_token}/pdf`} target="_blank" rel="noreferrer" className="p-1 hover:bg-zinc-100" title="Download PDF"><FileDown size={14} /></a>
+                      <a data-testid={ADMIN.quoteDownloadPdf(q.id)} href={`${API}/share/${q.share_token}/pdf`} target="_blank" rel="noreferrer" className="p-1 hover:bg-zinc-100" title="Download PDF"><FileDown size={14} /></a>
                       <button data-testid={ADMIN.quoteToggle(q.id)} onClick={() => toggle(q.id)} className="p-1 hover:bg-zinc-100" title={q.active ? "Disable link" : "Enable link"}><Power size={14} className={q.active ? "text-emerald-600" : "text-zinc-400"} /></button>
                       <button data-testid={ADMIN.quoteDelete(q.id)} onClick={() => del(q.id)} className="p-1 hover:bg-zinc-100 text-zinc-400 hover:text-red-600" title="Delete"><Trash2 size={14} /></button>
                     </div>

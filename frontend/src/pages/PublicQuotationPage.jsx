@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import api, { imageUrl, formatINR } from "@/lib/api";
+import api, { API, imageUrl, formatINR } from "@/lib/api";
 import { PUBLIC } from "@/constants/testIds";
 import { Printer, FileDown, Calendar, MapPin, User2, Hash, Mail, ZoomIn } from "lucide-react";
 import ImageLightbox from "@/components/ImageLightbox";
@@ -29,7 +29,7 @@ export default function PublicQuotationPage() {
   if (!q) return <div className="p-10 text-sm text-zinc-500">Loading…</div>;
 
   const createdStr = q.created_at ? new Date(q.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
-  const pdfUrl = `${process.env.REACT_APP_BACKEND_URL}/api/share/${token}/pdf`;
+  const pdfUrl = `${API}/share/${token}/pdf`;
 
   return (
     <div data-testid={PUBLIC.quotationContainer} className="min-h-screen bg-zinc-50">
